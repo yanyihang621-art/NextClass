@@ -49,18 +49,21 @@ export const defaultPeriods: Period[] = [
   { id: 3, start: '09:50', end: '10:35' },
   { id: 4, start: '10:45', end: '11:30' },
   { id: 5, start: '11:35', end: '12:20' },
-  { id: 6, start: '12:25', end: '13:10' },
+  { id: 6, start: '13:00', end: '13:45' },
   { id: 7, start: '13:50', end: '14:35' },
   { id: 8, start: '14:45', end: '15:30' },
   { id: 9, start: '15:40', end: '16:25' },
-  { id: 10, start: '16:35', end: '17:20' },
-  { id: 11, start: '17:25', end: '18:10' },
-  { id: 12, start: '18:30', end: '19:15' },
-  { id: 13, start: '19:20', end: '20:05' },
-  { id: 14, start: '20:10', end: '20:55' },
-  { id: 15, start: '21:00', end: '21:45' },
-  { id: 16, start: '21:50', end: '22:35' },
-  { id: 17, start: '22:40', end: '23:03' },
+  { id: 10, start: '16:30', end: '17:15' },
+  { id: 11, start: '18:00', end: '18:45' },
+  { id: 12, start: '18:50', end: '19:35' },
+  { id: 13, start: '19:40', end: '20:25' },
+  { id: 14, start: '21:45', end: '22:30' },
+  { id: 15, start: '21:55', end: '22:40' },
+  { id: 16, start: '22:05', end: '22:50' },
+  { id: 17, start: '22:15', end: '23:00' },
+  { id: 18, start: '22:25', end: '23:10' },
+  { id: 19, start: '22:35', end: '23:20' },
+  { id: 20, start: '22:45', end: '23:30' },
 ];
 
 const initialTimetables: TimetableConfig[] = [
@@ -77,7 +80,14 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     const saved = localStorage.getItem('timetables');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        // Migration: force update to the new 20-period default if they don't have 20 periods
+        return parsed.map((t: TimetableConfig) => {
+          if (!t.periods || t.periods.length !== 20) {
+            return { ...t, periods: defaultPeriods };
+          }
+          return t;
+        });
       } catch (e) {
         return initialTimetables;
       }

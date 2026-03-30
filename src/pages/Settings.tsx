@@ -57,6 +57,14 @@ export default function Settings() {
   const [isTotalWeeksPickerOpen, setIsTotalWeeksPickerOpen] = useState(false);
   const [activeTimePicker, setActiveTimePicker] = useState<{index: number, type: 'start' | 'end'} | null>(null);
 
+  const addMinutes = (time: string, mins: number) => {
+    const [h, m] = time.split(':').map(Number);
+    const totalMins = h * 60 + m + mins;
+    const newH = Math.floor(totalMins / 60) % 24;
+    const newM = totalMins % 60;
+    return `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}`;
+  };
+
   const totalWeeksOptions = Array.from({ length: 50 }, (_, i) => ({
     label: `${i + 1} 周`,
     value: i + 1
@@ -246,6 +254,41 @@ export default function Settings() {
                       </div>
                     </div>
                   ))}
+                </div>
+                <div className="flex flex-wrap gap-2 justify-between items-center mt-3">
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => {
+                        const lastPeriod = editPeriods[editPeriods.length - 1];
+                        const newId = lastPeriod ? lastPeriod.id + 1 : 1;
+                        const newStart = lastPeriod ? lastPeriod.end : '08:00';
+                        const newEnd = addMinutes(newStart, 45);
+                        setEditPeriods([...editPeriods, { id: newId, start: newStart, end: newEnd }]);
+                      }}
+                      className="text-sm text-primary font-bold flex items-center gap-1 hover:bg-primary/10 px-3 py-1.5 rounded-lg transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-sm">add</span>
+                      新增时间
+                    </button>
+                    <button 
+                      onClick={() => setEditPeriods(defaultPeriods)}
+                      className="text-sm text-amber-500 font-bold flex items-center gap-1 hover:bg-amber-50 px-3 py-1.5 rounded-lg transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-sm">refresh</span>
+                      恢复默认
+                    </button>
+                  </div>
+                  {editPeriods.length > 1 && (
+                    <button 
+                      onClick={() => {
+                        setEditPeriods(editPeriods.slice(0, -1));
+                      }}
+                      className="text-sm text-rose-500 font-bold flex items-center gap-1 hover:bg-rose-50 px-3 py-1.5 rounded-lg transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-sm">remove</span>
+                      删除最后一节
+                    </button>
+                  )}
                 </div>
               </div>
               

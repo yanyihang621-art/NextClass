@@ -104,13 +104,19 @@ export default function Timetable() {
     );
   }
 
-  const grid = Array.from({ length: activeTimetable.periods.length + 1 }, () => Array(7).fill(null));
+  const maxPeriod = Math.max(
+    activeTimetable.periods.length,
+    ...courses.filter(c => (c.timetableId || '1') === activeTimetable.id).map(c => c.periodEnd)
+  );
+  const grid = Array.from({ length: maxPeriod + 1 }, () => Array(7).fill(null));
   const currentCourses = courses.filter(c => (c.timetableId || '1') === activeTimetable.id);
   currentCourses.forEach(course => {
     const gridDay = course.day - 1;
-    grid[course.periodStart][gridDay] = course;
-    for (let p = course.periodStart + 1; p <= course.periodEnd; p++) {
-      grid[p][gridDay] = 'spanned';
+    if (grid[course.periodStart]) {
+      grid[course.periodStart][gridDay] = course;
+      for (let p = course.periodStart + 1; p <= course.periodEnd; p++) {
+        if (grid[p]) grid[p][gridDay] = 'spanned';
+      }
     }
   });
 
