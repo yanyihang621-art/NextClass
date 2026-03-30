@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: var(--theme-primary, #6d23f9);
+  --color-primary-container: var(--theme-primary-container, #e8ddff);
+  --color-on-primary-container: var(--theme-on-primary-container, #5300cd);
+  --color-secondary: #2f628c;
+  --color-secondary-container: #cee5ff;
+  --color-on-secondary-container: #0f4a73;
+  --color-tertiary: #64558f;
+  --color-tertiary-container: #e8ddff;
+  --color-on-tertiary-container: #4c3e75;
+  --color-error: #ba1a1a;
+  --color-error-container: #ffdad6;
+  --color-surface: #f9f9f9;
+  --color-on-surface: #1a1c1c;
+  --color-surface-variant: #e2e2e2;
+  --color-on-surface-variant: #4a4458;
+  --color-outline: #7b748a;
+  --color-outline-variant: #cbc2dc;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f3f3f4;
+  --color-surface-container: #eeeeee;
+  --color-surface-container-high: #e8e8e8;
+  --color-surface-container-highest: #e2e2e2;
+  
+  --font-headline: "Plus Jakarta Sans", "Noto Sans SC", sans-serif;
+  --font-body: "Plus Jakarta Sans", "Noto Sans SC", sans-serif;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--color-surface);
+  color: var(--color-on-surface);
+  min-height: max(884px, 100dvh);
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+.material-symbols-outlined.fill {
+  font-variation-settings: 'FILL' 1;
+}
+
+.rounded-dynamic {
+  border-radius: var(--app-radius, 16px);
+}
+
+.bg-glass {
+  background-color: rgba(255, 255, 255, var(--glass-opacity, 0.8));
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
