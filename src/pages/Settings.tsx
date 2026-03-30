@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import BottomNav from '../components/BottomNav';
 import { useSettings, defaultPeriods } from '../contexts/SettingsContext';
 import { useCourses } from '../contexts/CourseContext';
@@ -11,6 +11,7 @@ import { getBeijingTime } from '../lib/timeUtils';
 
 export default function Settings() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { 
     themeColor, setThemeColor, 
     transparency, setTransparency, 
@@ -36,6 +37,20 @@ export default function Settings() {
   const [editStartDate, setEditStartDate] = useState('');
   const [editTotalWeeks, setEditTotalWeeks] = useState(20);
   const [editPeriods, setEditPeriods] = useState(defaultPeriods);
+
+  useEffect(() => {
+    if (location.state?.openCreateTimetable) {
+      setIsTimetableManageOpen(true);
+      setEditingTableId('new');
+      setEditName('');
+      setEditStartDate(getBeijingTime().toISOString().split('T')[0]);
+      setEditTotalWeeks(20);
+      setEditPeriods(defaultPeriods);
+      
+      // Clear the state so it doesn't reopen on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   const [isPersonalizationOpen, setIsPersonalizationOpen] = useState(false);
   const [initialPersonalization, setInitialPersonalization] = useState<any>(null);

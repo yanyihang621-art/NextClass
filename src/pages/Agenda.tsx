@@ -50,7 +50,7 @@ export default function Agenda() {
           <span className="material-symbols-outlined text-6xl text-slate-300 mb-4">event_busy</span>
           <h2 className="text-xl font-bold text-slate-700 mb-2">当前无课表，去导入</h2>
           <p className="text-slate-500 mb-8">您还没有创建任何课表，或者所有课表已被删除。</p>
-          <Link to="/settings" className="px-6 py-3 bg-primary text-white rounded-full font-bold hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20">
+          <Link to="/settings" state={{ openCreateTimetable: true }} className="px-6 py-3 bg-primary text-white rounded-full font-bold hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20">
             去导入 / 创建课表
           </Link>
         </main>
