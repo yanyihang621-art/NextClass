@@ -11,6 +11,7 @@ import Timetable from './pages/Timetable';
 import Import from './pages/Import';
 import Settings from './pages/Settings';
 import CourseEditor from './pages/CourseEditor';
+import NextClass from './pages/NextClass';
 import ScrollToTop from './components/ScrollToTop';
 
 export default function App() {
@@ -26,6 +27,7 @@ export default function App() {
             <Route path="/import" element={<Import />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/editor" element={<CourseEditor />} />
+            <Route path="/nextclass" element={<NextClass />} />
           </Routes>
         </BrowserRouter>
       </CourseProvider>

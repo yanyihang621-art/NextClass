@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import BottomNav from '../components/BottomNav';
 import { useSettings, defaultPeriods } from '../contexts/SettingsContext';
 import { useCourses } from '../contexts/CourseContext';
@@ -10,6 +10,7 @@ import TimePickerModal from '../components/TimePickerModal';
 import { getBeijingTime } from '../lib/timeUtils';
 
 export default function Settings() {
+  const navigate = useNavigate();
   const { 
     themeColor, setThemeColor, 
     transparency, setTransparency, 
@@ -29,6 +30,7 @@ export default function Settings() {
   ] as const;
 
   const [editingTableId, setEditingTableId] = useState<string | null>(null);
+  const [isTimetableManageOpen, setIsTimetableManageOpen] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [editName, setEditName] = useState('');
   const [editStartDate, setEditStartDate] = useState('');
@@ -111,90 +113,130 @@ export default function Settings() {
   };
 
   return (
-    <div className="bg-background text-on-surface min-h-screen pb-28 font-body">
-      <main className="pt-6 px-4 max-w-2xl mx-auto">
-        <section className="mb-12">
-          <div className="flex items-center gap-3 mb-6">
-            <span className="material-symbols-outlined text-primary text-3xl">calendar_month</span>
-            <h3 className="text-xl font-bold font-headline">课表管理</h3>
+    <div className="bg-[#F7F7F9] text-on-surface min-h-screen pb-28 font-body">
+      <main className="pt-12 px-4 max-w-2xl mx-auto">
+        {/* User Profile Section */}
+        <section className="flex flex-col items-center mb-8">
+          <div className="w-20 h-20 rounded-full bg-rose-50 flex items-center justify-center mb-4 border-2 border-white shadow-sm">
+            <span className="material-symbols-outlined text-5xl text-slate-800">person</span>
           </div>
-          <div className="grid grid-cols-1 gap-4">
-            {timetables.map(t => (
-              <div key={t.id} className={cn("group relative p-6 rounded-dynamic border transition-all text-left", t.active ? "bg-white border-primary/30 shadow-sm" : "bg-surface-container-low border-transparent hover:border-primary/20")}>
-                <div className="flex items-center justify-between">
-                  <div className="flex-1 cursor-pointer" onClick={() => handleSetActive(t.id)}>
-                    {t.active && <p className="text-sm font-bold text-primary mb-1">当前学期</p>}
-                    <div className="flex items-center gap-2">
-                      <h4 className={cn("text-2xl font-bold", !t.active && "text-on-surface-variant opacity-80")}>{t.name}</h4>
-                      <button 
-                        onClick={(e) => { 
-                          e.stopPropagation(); 
-                          setEditingTableId(t.id); 
-                          setEditName(t.name); 
-                          setEditStartDate(t.startDate || '');
-                          setEditTotalWeeks(t.totalWeeks || 20);
-                          setEditPeriods(t.periods || defaultPeriods);
-                        }}
-                        className="p-1.5 rounded-full hover:bg-slate-200 text-slate-400 hover:text-primary transition-colors flex items-center justify-center"
-                      >
-                        <span className="material-symbols-outlined text-sm">edit</span>
-                      </button>
-                    </div>
-                    {t.term && <p className={cn("text-sm mt-1", t.active ? "text-on-surface-variant opacity-60" : "text-on-surface-variant opacity-50")}>{t.term}</p>}
-                  </div>
-                  {t.active ? (
-                    <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
-                      <span className="material-symbols-outlined text-white fill">check_circle</span>
-                    </div>
-                  ) : (
-                    <div className="w-12 h-12 flex items-center justify-center flex-shrink-0 cursor-pointer" onClick={() => handleSetActive(t.id)}>
-                       <span className="material-symbols-outlined text-on-surface-variant opacity-40">arrow_forward_ios</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-            
-            <button 
-              onClick={() => {
-                const now = getBeijingTime();
-                const defaultDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-                setEditingTableId('new');
-                setEditName('');
-                setEditStartDate(defaultDate);
-                setEditTotalWeeks(20);
-                setEditPeriods(defaultPeriods);
-              }}
-              className="flex items-center justify-center gap-2 p-4 rounded-dynamic border-2 border-dashed border-outline-variant/50 text-on-surface-variant hover:border-primary/50 hover:text-primary transition-colors"
-            >
-              <span className="material-symbols-outlined">add</span>
-              <span className="font-bold">新建课表</span>
-            </button>
+          <h2 className="text-2xl font-bold text-slate-800 mb-1 tracking-tight">未登录</h2>
+          <div className="flex items-center text-sm text-slate-500">
+            <span>学校/年级</span>
+            <span className="material-symbols-outlined text-sm ml-0.5">chevron_right</span>
           </div>
         </section>
 
-        <section>
-          <div className="flex items-center gap-3 mb-6">
-            <span className="material-symbols-outlined text-primary text-3xl">auto_fix_high</span>
-            <h3 className="text-xl font-bold font-headline">个性化设置</h3>
+        {/* Promotional Banner Placeholder */}
+        <section className="mb-6">
+          <div className="h-20 bg-slate-100/50 rounded-2xl border border-dashed border-slate-200 flex items-center justify-center text-slate-400 text-sm">
+            空白占位符
           </div>
+        </section>
+
+        {/* Menu Group 1 */}
+        <section className="mb-4 bg-white rounded-2xl shadow-sm overflow-hidden">
+          <button 
+            onClick={() => setIsTimetableManageOpen(true)}
+            className="w-full flex items-center justify-between p-4 bg-white hover:bg-slate-50 transition-colors text-left border-b border-slate-50"
+          >
+            <span className="text-[16px] text-slate-800">课表管理</span>
+            <span className="material-symbols-outlined text-slate-300">chevron_right</span>
+          </button>
           <button 
             onClick={handleOpenPersonalization}
-            className="w-full flex items-center justify-between p-6 rounded-dynamic bg-white border border-outline-variant/15 shadow-sm hover:shadow-md transition-all text-left"
+            className="w-full flex items-center justify-between p-4 bg-white hover:bg-slate-50 transition-colors text-left"
           >
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-primary-container flex items-center justify-center text-primary">
-                <span className="material-symbols-outlined">palette</span>
-              </div>
-              <div>
-                <h4 className="text-lg font-bold">外观与主题</h4>
-                <p className="text-sm text-on-surface-variant opacity-70">调整颜色、圆角、透明度等</p>
-              </div>
-            </div>
-            <span className="material-symbols-outlined text-on-surface-variant opacity-40">chevron_right</span>
+            <span className="text-[16px] text-slate-800">个性化设置</span>
+            <span className="material-symbols-outlined text-slate-300">chevron_right</span>
+          </button>
+        </section>
+
+        {/* Menu Group 2 */}
+        <section className="mb-6 bg-white rounded-2xl shadow-sm overflow-hidden">
+          <button 
+            className="w-full flex items-center justify-between p-4 bg-white hover:bg-slate-50 transition-colors text-left border-b border-slate-50"
+          >
+            <span className="text-[16px] text-slate-800">常见问题</span>
+            <span className="material-symbols-outlined text-slate-300">chevron_right</span>
+          </button>
+          <button 
+            onClick={() => navigate('/nextclass')}
+            className="w-full flex items-center justify-between p-4 bg-white hover:bg-slate-50 transition-colors text-left"
+          >
+            <span className="text-[16px] text-slate-800">更多</span>
+            <span className="material-symbols-outlined text-slate-300">chevron_right</span>
           </button>
         </section>
       </main>
+
+      {/* Timetable Management Modal */}
+      {isTimetableManageOpen && (
+        <div className="fixed inset-0 z-[90] flex flex-col bg-[#F7F7F9] animate-in slide-in-from-right duration-300">
+          <div className="flex items-center justify-between p-4 bg-[#F7F7F9] sticky top-0 z-10">
+            <button onClick={() => setIsTimetableManageOpen(false)} className="p-2 -ml-2 rounded-full hover:bg-slate-200 transition-colors">
+              <span className="material-symbols-outlined text-slate-800">arrow_back_ios_new</span>
+            </button>
+            <h3 className="text-lg font-bold">课表管理</h3>
+            <div className="w-10"></div>
+          </div>
+          <div className="flex-1 overflow-y-auto px-4 pt-2 pb-28">
+            <div className="grid grid-cols-1 gap-4">
+              {timetables.map(t => (
+                <div key={t.id} className={cn("group relative p-5 rounded-2xl border transition-all text-left bg-white shadow-sm", t.active ? "border-primary/30 ring-1 ring-primary/10" : "border-transparent hover:border-primary/20")}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 cursor-pointer" onClick={() => handleSetActive(t.id)}>
+                      {t.active && <p className="text-sm font-bold text-primary mb-1">当前学期</p>}
+                      <div className="flex items-center gap-2">
+                        <h4 className={cn("text-2xl font-bold", !t.active && "text-on-surface-variant opacity-80")}>{t.name}</h4>
+                        <button 
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
+                            setEditingTableId(t.id); 
+                            setEditName(t.name); 
+                            setEditStartDate(t.startDate || '');
+                            setEditTotalWeeks(t.totalWeeks || 20);
+                            setEditPeriods(t.periods || defaultPeriods);
+                          }}
+                          className="p-1.5 rounded-full hover:bg-slate-200 text-slate-400 hover:text-primary transition-colors flex items-center justify-center"
+                        >
+                          <span className="material-symbols-outlined text-sm">edit</span>
+                        </button>
+                      </div>
+                      {t.term && <p className={cn("text-sm mt-1", t.active ? "text-on-surface-variant opacity-60" : "text-on-surface-variant opacity-50")}>{t.term}</p>}
+                    </div>
+                    {t.active ? (
+                      <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+                        <span className="material-symbols-outlined text-white fill">check_circle</span>
+                      </div>
+                    ) : (
+                      <div className="w-12 h-12 flex items-center justify-center flex-shrink-0 cursor-pointer" onClick={() => handleSetActive(t.id)}>
+                         <span className="material-symbols-outlined text-on-surface-variant opacity-40">arrow_forward_ios</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+              
+              <button 
+                onClick={() => {
+                  const now = getBeijingTime();
+                  const defaultDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+                  setEditingTableId('new');
+                  setEditName('');
+                  setEditStartDate(defaultDate);
+                  setEditTotalWeeks(20);
+                  setEditPeriods(defaultPeriods);
+                }}
+                className="flex items-center justify-center gap-2 p-4 rounded-2xl border-2 border-dashed border-slate-200 text-slate-500 hover:border-primary/50 hover:text-primary transition-colors bg-white shadow-sm"
+              >
+                <span className="material-symbols-outlined">add</span>
+                <span className="font-bold">新建课表</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Edit Timetable Modal */}
       {editingTableId && (
@@ -365,82 +407,80 @@ export default function Settings() {
 
       {/* Personalization Modal */}
       {isPersonalizationOpen && (
-        <div className="fixed inset-0 z-[100] flex flex-col justify-end bg-black/40 backdrop-blur-sm" onClick={handleCancelPersonalization}>
-          <div className="bg-surface rounded-t-[2rem] p-6 w-full max-h-[85vh] overflow-y-auto shadow-2xl animate-in slide-in-from-bottom duration-300" onClick={e => e.stopPropagation()}>
-            <div className="flex justify-between items-center mb-6 sticky top-0 bg-surface pt-2 pb-4 z-10">
-              <button onClick={handleCancelPersonalization} className="p-2 -ml-2 rounded-full hover:bg-slate-100 transition-colors">
-                <span className="material-symbols-outlined text-slate-600">close</span>
-              </button>
-              <h3 className="text-xl font-bold">个性化设置</h3>
-              <button onClick={() => setIsPersonalizationOpen(false)} className="p-2 -mr-2 rounded-full hover:bg-primary/10 text-primary transition-colors">
-                <span className="material-symbols-outlined">check</span>
-              </button>
+        <div className="fixed inset-0 z-[90] flex flex-col bg-[#F7F7F9] animate-in slide-in-from-right duration-300">
+          <div className="flex items-center justify-between p-4 bg-[#F7F7F9] sticky top-0 z-10">
+            <button onClick={handleCancelPersonalization} className="p-2 -ml-2 rounded-full hover:bg-slate-200 transition-colors">
+              <span className="material-symbols-outlined text-slate-800">arrow_back_ios_new</span>
+            </button>
+            <h3 className="text-lg font-bold">个性化设置</h3>
+            <button onClick={() => setIsPersonalizationOpen(false)} className="p-2 -mr-2 rounded-full hover:bg-primary/10 text-primary transition-colors flex items-center justify-center w-10 h-10">
+              <span className="material-symbols-outlined">check</span>
+            </button>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto px-4 pt-2 pb-28 space-y-4">
+            <div className="p-5 rounded-2xl bg-white shadow-sm">
+              <div className="flex justify-between items-center mb-6">
+                <label className="font-bold text-[16px] text-slate-800">圆角/方角</label>
+                <span className="text-primary font-bold px-3 py-1 bg-primary/10 rounded-full text-sm">{cornerRadius}px</span>
+              </div>
+              <input 
+                className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-primary" 
+                max="48" min="0" type="range" 
+                value={cornerRadius}
+                onChange={(e) => setCornerRadius(Number(e.target.value))}
+              />
+              <div className="flex justify-between mt-3 text-xs font-bold text-slate-400 uppercase tracking-widest">
+                <span>方角</span>
+                <span>圆角</span>
+              </div>
             </div>
-            
-            <div className="space-y-4 pb-8">
-              <div className="p-6 rounded-dynamic bg-white border border-outline-variant/15 shadow-sm">
-                <div className="flex justify-between items-center mb-6">
-                  <label className="font-bold text-lg">圆角/方角</label>
-                  <span className="text-primary font-bold px-3 py-1 bg-primary-container rounded-full text-sm">{cornerRadius}px</span>
-                </div>
-                <input 
-                  className="w-full h-2 bg-surface-container rounded-lg appearance-none cursor-pointer accent-primary" 
-                  max="48" min="0" type="range" 
-                  value={cornerRadius}
-                  onChange={(e) => setCornerRadius(Number(e.target.value))}
-                />
-                <div className="flex justify-between mt-3 text-xs font-bold text-on-surface-variant opacity-40 uppercase tracking-widest">
-                  <span>方角</span>
-                  <span>圆角</span>
-                </div>
-              </div>
 
-              <div className="p-6 rounded-dynamic bg-white border border-outline-variant/15 shadow-sm">
-                <div className="flex justify-between items-center mb-6">
-                  <label className="font-bold text-lg">课程长度</label>
-                  <span className="text-primary font-bold px-3 py-1 bg-primary-container rounded-full text-sm">{cellHeight}px</span>
-                </div>
-                <input 
-                  className="w-full h-2 bg-surface-container rounded-lg appearance-none cursor-pointer accent-primary" 
-                  max="120" min="40" type="range" 
-                  value={cellHeight}
-                  onChange={(e) => setCellHeight(Number(e.target.value))}
-                />
-                <div className="flex justify-between mt-3 text-xs font-bold text-on-surface-variant opacity-40 uppercase tracking-widest">
-                  <span>紧凑</span>
-                  <span>宽松</span>
-                </div>
+            <div className="p-5 rounded-2xl bg-white shadow-sm">
+              <div className="flex justify-between items-center mb-6">
+                <label className="font-bold text-[16px] text-slate-800">课程长度</label>
+                <span className="text-primary font-bold px-3 py-1 bg-primary/10 rounded-full text-sm">{cellHeight}px</span>
               </div>
-
-              <div className="p-6 rounded-dynamic bg-white border border-outline-variant/15 shadow-sm">
-                <div className="flex justify-between items-center mb-6">
-                  <label className="font-bold text-lg">透明度</label>
-                  <span className="text-primary font-bold px-3 py-1 bg-primary-container rounded-full text-sm">{transparency}%</span>
-                </div>
-                <input 
-                  className="w-full h-2 bg-surface-container rounded-lg appearance-none cursor-pointer accent-primary" 
-                  max="100" min="0" type="range" 
-                  value={transparency}
-                  onChange={(e) => setTransparency(Number(e.target.value))}
-                />
+              <input 
+                className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-primary" 
+                max="120" min="40" type="range" 
+                value={cellHeight}
+                onChange={(e) => setCellHeight(Number(e.target.value))}
+              />
+              <div className="flex justify-between mt-3 text-xs font-bold text-slate-400 uppercase tracking-widest">
+                <span>紧凑</span>
+                <span>宽松</span>
               </div>
+            </div>
 
-              <div className="p-6 rounded-dynamic bg-white border border-outline-variant/15 shadow-sm">
-                <div className="mb-4">
-                  <label className="font-bold text-lg block mb-4">主题颜色</label>
-                  <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
-                    {colors.map((c) => (
-                      <button 
-                        key={c.id}
-                        onClick={() => setThemeColor(c.id as any)}
-                        className={cn(
-                          "w-12 h-12 rounded-full flex-shrink-0 border-4 border-white transition-all",
-                          c.class,
-                          themeColor === c.id ? "shadow-xl ring-2 ring-primary scale-110" : "shadow-sm hover:scale-105"
-                        )}
-                      ></button>
-                    ))}
-                  </div>
+            <div className="p-5 rounded-2xl bg-white shadow-sm">
+              <div className="flex justify-between items-center mb-6">
+                <label className="font-bold text-[16px] text-slate-800">透明度</label>
+                <span className="text-primary font-bold px-3 py-1 bg-primary/10 rounded-full text-sm">{transparency}%</span>
+              </div>
+              <input 
+                className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-primary" 
+                max="100" min="0" type="range" 
+                value={transparency}
+                onChange={(e) => setTransparency(Number(e.target.value))}
+              />
+            </div>
+
+            <div className="p-5 rounded-2xl bg-white shadow-sm">
+              <div className="mb-4">
+                <label className="font-bold text-[16px] text-slate-800 block mb-4">主题颜色</label>
+                <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+                  {colors.map((c) => (
+                    <button 
+                      key={c.id}
+                      onClick={() => setThemeColor(c.id as any)}
+                      className={cn(
+                        "w-12 h-12 rounded-full flex-shrink-0 border-4 border-white transition-all",
+                        c.class,
+                        themeColor === c.id ? "shadow-md ring-2 ring-primary scale-110" : "shadow-sm hover:scale-105"
+                      )}
+                    ></button>
+                  ))}
                 </div>
               </div>
             </div>

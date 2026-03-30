@@ -14,7 +14,7 @@ export default function BottomNav() {
     { path: '/agenda', icon: 'today', label: '日程' },
     { path: '/timetable', icon: 'calendar_view_week', label: '课表' },
     { path: '/import', icon: 'cloud_upload', label: '导入' },
-    { path: '/settings', icon: 'settings', label: '管理' },
+    { path: '/settings', icon: 'person', label: '我的' },
   ];
 
   return (

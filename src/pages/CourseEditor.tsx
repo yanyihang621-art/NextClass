@@ -37,7 +37,6 @@ export default function CourseEditor() {
   const [day, setDay] = useState(initialData.day || '1');
   const [periodStart, setPeriodStart] = useState(initialData.periodStart || '1');
   const [periodEnd, setPeriodEnd] = useState(initialData.periodEnd || '2');
-  const [color, setColor] = useState(initialData.color || '#6d23f9');
 
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -82,8 +81,8 @@ export default function CourseEditor() {
       day: parseInt(day, 10),
       periodStart: parseInt(periodStart, 10),
       periodEnd: parseInt(periodEnd, 10),
-      color,
-      bg: `${color}20`
+      color: initialData.color || '',
+      bg: initialData.bg || ''
     };
 
     if (isNew) {
@@ -302,23 +301,6 @@ export default function CourseEditor() {
                 第 {periodEnd} 节
               </div>
             </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-dynamic shadow-sm border border-slate-100 p-4">
-          <div className="flex items-center mb-4">
-            <span className="material-symbols-outlined text-slate-400 mr-4">palette</span>
-            <span className="text-slate-700">课程颜色</span>
-          </div>
-          <div className="flex gap-3 overflow-x-auto pb-2 pl-10 scrollbar-hide">
-            {['#6d23f9', '#2196F3', '#4CAF50', '#FF9800', '#E91E63', '#9C27B0', '#00BCD4'].map(c => (
-              <button
-                key={c}
-                onClick={() => setColor(c)}
-                className={`w-8 h-8 rounded-full flex-shrink-0 transition-transform ${color === c ? 'scale-125 ring-2 ring-offset-2 ring-slate-300' : 'hover:scale-110'}`}
-                style={{ backgroundColor: c }}
-              />
-            ))}
           </div>
         </div>
         
