@@ -15,6 +15,7 @@ import Import from './pages/Import';
 import Settings from './pages/Settings';
 import CourseEditor from './pages/CourseEditor';
 import NextClass from './pages/NextClass';
+import ResetPassword from './pages/ResetPassword';
 import ScrollToTop from './components/ScrollToTop';
 
 export default function App() {
@@ -26,6 +27,7 @@ export default function App() {
             <ScrollToTop />
             <Routes>
               <Route path="/login" element={<Login />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/" element={<ProtectedRoute><Navigate to="/timetable" replace /></ProtectedRoute>} />
               <Route path="/agenda" element={<ProtectedRoute><Agenda /></ProtectedRoute>} />
               <Route path="/timetable" element={<ProtectedRoute><Timetable /></ProtectedRoute>} />

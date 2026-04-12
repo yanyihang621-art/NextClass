@@ -125,7 +125,7 @@ export default function WeekSelectorModal({ isOpen, onClose, title, value, onCha
             <button onClick={selectAll} className="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-full text-sm font-medium whitespace-nowrap">全选</button>
             <button onClick={selectOdd} className="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-full text-sm font-medium whitespace-nowrap">单周</button>
             <button onClick={selectEven} className="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-full text-sm font-medium whitespace-nowrap">双周</button>
-            <button onClick={clearAll} className="px-3 py-1.5 bg-rose-50 text-rose-600 rounded-full text-sm font-medium whitespace-nowrap">清空</button>
+            <button onClick={clearAll} className="px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm font-medium whitespace-nowrap">清空</button>
           </div>
 
           <div className="grid grid-cols-5 gap-2">

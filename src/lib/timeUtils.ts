@@ -56,3 +56,39 @@ export const calculateCurrentWeek = (date: Date, startDateStr: string, totalWeek
   
   return { semesterStart, currentWeek };
 };
+
+export const isCourseInWeek = (weeksStr: string, currentWeek: number): boolean => {
+  if (!weeksStr) return true; // If no week info, default to showing the course
+  
+  const cleanStr = weeksStr.replace(/周/g, '').trim();
+  const parts = cleanStr.split(',');
+
+  for (const part of parts) {
+    const isOddOnly = part.includes('(单)') || part.includes('单');
+    const isEvenOnly = part.includes('(双)') || part.includes('双');
+    
+    // Remove the modifier string for parsing numbers
+    const numStr = part.replace(/\(单\)|\(双\)|单|双|奇|偶|\(|\)/g, '').trim();
+    
+    if (numStr.includes('-')) {
+      const [start, end] = numStr.split('-').map(n => parseInt(n, 10));
+      if (!isNaN(start) && !isNaN(end)) {
+        if (currentWeek >= start && currentWeek <= end) {
+          if (isOddOnly && currentWeek % 2 === 0) continue;
+          if (isEvenOnly && currentWeek % 2 !== 0) continue;
+          return true;
+        }
+      }
+    } else {
+      const singleWeek = parseInt(numStr, 10);
+      if (!isNaN(singleWeek) && currentWeek === singleWeek) {
+        if (isOddOnly && currentWeek % 2 === 0) continue;
+        if (isEvenOnly && currentWeek % 2 !== 0) continue;
+        return true;
+      }
+    }
+  }
+  
+  return false;
+};
+

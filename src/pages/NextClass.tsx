@@ -4,43 +4,17 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { getBeijingTime } from '../lib/timeUtils';
 
-type DeleteStep = 'idle' | 'confirm1' | 'password' | 'confirm2' | 'deleting' | 'done';
-
-interface DeletionLimits {
-  date: string;
-  attempts: number;
-}
-
-function getBeijingDateStr(): string {
-  const bjNow = getBeijingTime();
-  const y = bjNow.getFullYear();
-  const m = String(bjNow.getMonth() + 1).padStart(2, '0');
-  const d = String(bjNow.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-}
-
-function getDeletionLimits(userId: string): DeletionLimits {
-  const key = `account_deletion_limits_${userId}`;
-  try {
-    const raw = localStorage.getItem(key);
-    if (raw) return JSON.parse(raw);
-  } catch { /* ignore */ }
-  return { date: getBeijingDateStr(), attempts: 0 };
-}
-
-function saveDeletionLimits(userId: string, limits: DeletionLimits) {
-  localStorage.setItem(`account_deletion_limits_${userId}`, JSON.stringify(limits));
-}
+type DeleteStep = 'idle' | 'confirm1' | 'otp' | 'confirm2' | 'deleting' | 'done';
 
 export default function NextClass() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, sendEmailOtp, verifyEmailOtp } = useAuth();
 
   const [deleteStep, setDeleteStep] = useState<DeleteStep>('idle');
-  const [password, setPassword] = useState('');
+  const [otpCode, setOtpCode] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [remainingAttempts, setRemainingAttempts] = useState(5);
+  const [resendCooldown, setResendCooldown] = useState(0);
 
   const menuItems = [
     { label: '联系我们', path: '#' },
@@ -48,68 +22,63 @@ export default function NextClass() {
     { label: '个人信息收集清单', path: '#' },
     { label: '第三方信息共享清单', path: '#' },
     { label: '注销账号', path: '#', action: () => handleStartDelete() },
-    { label: '退出登录', path: '#' },
   ];
 
   const handleStartDelete = () => {
     setDeleteStep('confirm1');
-    setPassword('');
+    setOtpCode('');
     setErrorMsg('');
   };
 
-  const handleConfirm1 = () => {
-    if (!user) return;
-    const todayStr = getBeijingDateStr();
-    const limits = getDeletionLimits(user.id);
-    if (limits.date !== todayStr) {
-      limits.date = todayStr;
-      limits.attempts = 0;
-      saveDeletionLimits(user.id, limits);
-    }
-    if (limits.attempts >= 5) {
-      setErrorMsg('今日密码验证次数已用尽，请明天再试');
+  const startResendCooldown = () => {
+    setResendCooldown(60);
+    const timer = setInterval(() => {
+      setResendCooldown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const handleConfirm1 = async () => {
+    if (!user?.email) return;
+    setIsSubmitting(true);
+    setErrorMsg('');
+    const { error } = await sendEmailOtp(user.email);
+    setIsSubmitting(false);
+
+    if (error) {
+      setErrorMsg(error);
       return;
     }
-    setRemainingAttempts(5 - limits.attempts);
-    setDeleteStep('password');
-    setErrorMsg('');
-    setPassword('');
+    
+    startResendCooldown();
+    setDeleteStep('otp');
   };
 
-  const handlePasswordSubmit = async () => {
-    if (!user?.email || !password) return;
+  const handleResendOtp = async () => {
+    if (!user?.email || resendCooldown > 0) return;
+    setErrorMsg('');
+    const { error } = await sendEmailOtp(user.email);
+    if (error) {
+      setErrorMsg(error);
+    } else {
+      startResendCooldown();
+    }
+  };
+
+  const handleOtpSubmit = async () => {
+    if (!user?.email || otpCode.length !== 6) return;
     setIsSubmitting(true);
     setErrorMsg('');
 
-    const todayStr = getBeijingDateStr();
-    const limits = getDeletionLimits(user.id);
-    if (limits.date !== todayStr) {
-      limits.date = todayStr;
-      limits.attempts = 0;
-    }
-    if (limits.attempts >= 5) {
-      setErrorMsg('今日密码验证次数已用尽，请明天再试');
-      setIsSubmitting(false);
-      return;
-    }
-
-    // Verify password by re-authenticating
-    const { error } = await supabase.auth.signInWithPassword({
-      email: user.email,
-      password,
-    });
+    const { error } = await verifyEmailOtp(user.email, otpCode);
 
     if (error) {
-      limits.attempts += 1;
-      saveDeletionLimits(user.id, limits);
-      const left = 5 - limits.attempts;
-      setRemainingAttempts(left);
-      if (left <= 0) {
-        setErrorMsg('今日密码验证次数已用尽，请明天再试');
-      } else {
-        setErrorMsg(`密码错误，今日还剩 ${left} 次机会`);
-      }
-      setPassword('');
+      setErrorMsg(error);
       setIsSubmitting(false);
       return;
     }
@@ -136,7 +105,6 @@ export default function NextClass() {
       // Clear all localStorage
       localStorage.removeItem(`courses_${uid}`);
       localStorage.removeItem(`timetables_${uid}`);
-      localStorage.removeItem(`account_deletion_limits_${uid}`);
       localStorage.removeItem('courses');
       localStorage.removeItem('timetables');
       await supabase.auth.signOut();
@@ -150,7 +118,7 @@ export default function NextClass() {
 
   const handleCancel = () => {
     setDeleteStep('idle');
-    setPassword('');
+    setOtpCode('');
     setErrorMsg('');
   };
 
@@ -175,7 +143,7 @@ export default function NextClass() {
                 index !== menuItems.length - 1 ? 'border-b border-slate-50' : ''
               }`}
             >
-              <span className={`text-[16px] ${item.label === '注销账号' ? 'text-rose-500' : 'text-slate-800'}`}>{item.label}</span>
+              <span className={`text-[16px] ${item.label === '注销账号' ? 'text-primary' : 'text-slate-800'}`}>{item.label}</span>
               <span className="material-symbols-outlined text-slate-300">chevron_right</span>
             </button>
           ))}
@@ -187,21 +155,21 @@ export default function NextClass() {
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center flex-shrink-0">
-                <span className="material-symbols-outlined text-rose-500">warning</span>
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <span className="material-symbols-outlined text-primary">warning</span>
               </div>
               <h3 className="text-lg font-bold text-slate-900">注销账号</h3>
             </div>
             <p className="text-slate-600 mb-2 leading-relaxed">确定要注销您的账号吗？</p>
             <p className="text-sm text-slate-400 mb-6">注销后，您的账号及所有课表、课程数据将被永久删除，且无法恢复。</p>
             {errorMsg && (
-              <p className="text-sm text-rose-500 bg-rose-50 rounded-lg px-3 py-2 mb-4">{errorMsg}</p>
+              <p className="text-sm text-primary bg-primary/10 rounded-lg px-3 py-2 mb-4">{errorMsg}</p>
             )}
             <div className="flex justify-end gap-3">
               <button onClick={handleCancel} className="px-5 py-2.5 text-slate-600 font-medium hover:bg-slate-100 rounded-full transition-colors">
                 取消
               </button>
-              <button onClick={handleConfirm1} className="px-6 py-2.5 bg-rose-500 text-white rounded-full font-bold hover:bg-rose-600 transition-colors">
+              <button onClick={handleConfirm1} className="px-6 py-2.5 bg-primary text-white rounded-full font-bold hover:bg-primary transition-colors">
                 继续注销
               </button>
             </div>
@@ -209,46 +177,69 @@ export default function NextClass() {
         </div>
       )}
 
-      {/* Step 2: Password Verification */}
-      {deleteStep === 'password' && (
+      {/* Step 2: OTP Verification */}
+      {deleteStep === 'otp' && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
-                <span className="material-symbols-outlined text-amber-600">lock</span>
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <span className="material-symbols-outlined text-primary">verified_user</span>
               </div>
               <div>
-                <h3 className="text-lg font-bold text-slate-900">身份验证</h3>
-                <p className="text-xs text-slate-400">请输入当前账号的密码以确认身份</p>
+                <h3 className="text-lg font-bold text-slate-900">安全验证</h3>
+                <p className="text-xs text-slate-400">已向您的邮箱发送注销验证码</p>
               </div>
             </div>
-            <input
-              type="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handlePasswordSubmit()}
-              placeholder="请输入密码"
-              className="w-full bg-slate-100 border-none rounded-xl p-3.5 outline-none focus:ring-2 focus:ring-amber-400 mb-3 text-sm"
-              autoFocus
-              disabled={isSubmitting || remainingAttempts <= 0}
-            />
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-xs text-slate-400">今日剩余 {remainingAttempts} 次验证机会</p>
+            
+            <div className="relative mb-3">
+              <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-300 text-xl">pin</span>
+              <input
+                type="text"
+                value={otpCode}
+                onChange={e => {
+                  const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 6);
+                  setOtpCode(val);
+                }}
+                onKeyDown={e => e.key === 'Enter' && otpCode.length === 6 && handleOtpSubmit()}
+                placeholder="输入6位验证码"
+                className="w-full bg-slate-100 border-none rounded-xl py-3.5 pl-11 pr-4 outline-none focus:ring-2 focus:ring-primary text-center text-lg tracking-[0.5em] font-mono"
+                autoComplete="one-time-code"
+                inputMode="numeric"
+                maxLength={6}
+                autoFocus
+                disabled={isSubmitting}
+              />
             </div>
+            
             {errorMsg && (
-              <p className="text-sm text-rose-500 bg-rose-50 rounded-lg px-3 py-2 mb-4">{errorMsg}</p>
+              <p className="text-sm text-primary bg-primary/10 rounded-lg px-3 py-2 mb-4">{errorMsg}</p>
             )}
-            <div className="flex justify-end gap-3">
-              <button onClick={handleCancel} className="px-5 py-2.5 text-slate-600 font-medium hover:bg-slate-100 rounded-full transition-colors" disabled={isSubmitting}>
+            
+            <div className="text-center mb-4">
+              <button
+                type="button"
+                onClick={handleResendOtp}
+                disabled={resendCooldown > 0}
+                className="text-xs text-slate-500 hover:text-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {resendCooldown > 0 ? `${resendCooldown}s 后可重新发送` : '重新发送验证码'}
+              </button>
+            </div>
+            
+            <div className="flex justify-end gap-3 rounded-lg">
+              <button onClick={handleCancel} className="flex-1 py-2.5 text-slate-600 font-medium hover:bg-slate-100 rounded-xl transition-colors" disabled={isSubmitting}>
                 取消
               </button>
               <button
-                onClick={handlePasswordSubmit}
-                disabled={isSubmitting || !password || remainingAttempts <= 0}
-                className="px-6 py-2.5 bg-amber-500 text-white rounded-full font-bold hover:bg-amber-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                onClick={handleOtpSubmit}
+                disabled={isSubmitting || otpCode.length !== 6}
+                className="flex-1 py-2.5 bg-primary text-white rounded-xl font-bold hover:bg-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                {isSubmitting && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>}
-                验证
+                {isSubmitting ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                ) : (
+                  '验证'
+                )}
               </button>
             </div>
           </div>
@@ -260,23 +251,23 @@ export default function NextClass() {
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center flex-shrink-0">
-                <span className="material-symbols-outlined text-rose-600">delete_forever</span>
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <span className="material-symbols-outlined text-primary">delete_forever</span>
               </div>
-              <h3 className="text-lg font-bold text-rose-600">最终确认</h3>
+              <h3 className="text-lg font-bold text-primary">最终确认</h3>
             </div>
             <p className="text-slate-600 mb-2 leading-relaxed">您的身份已验证。</p>
-            <p className="text-sm text-rose-500 font-medium bg-rose-50 rounded-lg px-3 py-2.5 mb-6">
+            <p className="text-sm text-primary font-medium bg-primary/10 rounded-lg px-3 py-2.5 mb-6">
               ⚠️ 点击"确认注销"后，您的账号及所有课表、课程数据将被立即且永久删除。此操作无法撤销。
             </p>
             {errorMsg && (
-              <p className="text-sm text-rose-500 bg-rose-50 rounded-lg px-3 py-2 mb-4 border border-rose-200">{errorMsg}</p>
+              <p className="text-sm text-primary bg-primary/10 rounded-lg px-3 py-2 mb-4 border border-primary/20">{errorMsg}</p>
             )}
             <div className="flex justify-end gap-3">
               <button onClick={handleCancel} className="px-5 py-2.5 text-slate-600 font-medium hover:bg-slate-100 rounded-full transition-colors">
                 取消
               </button>
-              <button onClick={handleFinalDelete} className="px-6 py-2.5 bg-rose-600 text-white rounded-full font-bold hover:bg-rose-700 transition-colors">
+              <button onClick={handleFinalDelete} className="px-6 py-2.5 bg-primary text-white rounded-full font-bold hover:brightness-110 transition-colors">
                 确认注销
               </button>
             </div>
@@ -288,7 +279,7 @@ export default function NextClass() {
       {deleteStep === 'deleting' && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
           <div className="bg-white rounded-2xl p-8 w-full max-w-xs shadow-2xl flex flex-col items-center gap-4">
-            <div className="w-12 h-12 border-3 border-rose-500 border-t-transparent rounded-full animate-spin"></div>
+            <div className="w-12 h-12 border-3 border-primary border-t-transparent rounded-full animate-spin"></div>
             <p className="text-slate-700 font-bold">正在注销账号...</p>
             <p className="text-xs text-slate-400">请勿关闭页面</p>
           </div>
@@ -299,8 +290,8 @@ export default function NextClass() {
       {deleteStep === 'done' && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
           <div className="bg-white rounded-2xl p-8 w-full max-w-xs shadow-2xl flex flex-col items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
-              <span className="material-symbols-outlined text-green-600 text-3xl">check_circle</span>
+            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+              <span className="material-symbols-outlined text-primary text-3xl">check_circle</span>
             </div>
             <p className="text-slate-700 font-bold">账号已注销</p>
             <p className="text-xs text-slate-400">正在跳转到登录页...</p>

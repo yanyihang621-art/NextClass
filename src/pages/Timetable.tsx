@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import BottomNav from '../components/BottomNav';
 import { useSettings } from '../contexts/SettingsContext';
 import { useCourses } from '../contexts/CourseContext';
-import { getBeijingTime, calculateCurrentWeek } from '../lib/timeUtils';
+import { getBeijingTime, calculateCurrentWeek, isCourseInWeek } from '../lib/timeUtils';
 
 export default function Timetable() {
   const navigate = useNavigate();
@@ -115,7 +115,10 @@ export default function Timetable() {
     ...courses.filter(c => (c.timetableId || '1') === activeTimetable.id).map(c => c.periodEnd)
   );
   const grid = Array.from({ length: maxPeriod + 1 }, () => Array(7).fill(null));
-  const currentCourses = courses.filter(c => (c.timetableId || '1') === activeTimetable.id);
+  const currentCourses = courses.filter(c => 
+    (c.timetableId || '1') === activeTimetable.id &&
+    isCourseInWeek(c.weeks, week)
+  );
   currentCourses.forEach(course => {
     const gridDay = course.day - 1;
     if (grid[course.periodStart]) {

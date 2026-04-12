@@ -20,5 +20,10 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
     return <Navigate to="/login" replace />;
   }
 
+  // 邮箱未验证拦截：用户存在但 email_confirmed_at 为空
+  if (!user.email_confirmed_at) {
+    return <Navigate to="/login" replace />;
+  }
+
   return <>{children}</>;
 }

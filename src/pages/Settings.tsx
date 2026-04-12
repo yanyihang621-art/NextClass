@@ -21,14 +21,14 @@ export default function Settings() {
     timetables, setTimetables
   } = useSettings();
   const { deleteCoursesByTimetable } = useCourses();
-  const { getStudentId, signOut } = useAuth();
+  const { getUserEmail, signOut } = useAuth();
 
   const colors = [
     { id: 'purple', class: 'bg-[#6d23f9]' },
     { id: 'blue', class: 'bg-blue-500' },
     { id: 'emerald', class: 'bg-emerald-500' },
-    { id: 'rose', class: 'bg-rose-500' },
-    { id: 'amber', class: 'bg-amber-500' },
+    { id: 'rose', class: 'bg-primary' },
+    { id: 'amber', class: 'bg-primary' },
     { id: 'indigo', class: 'bg-indigo-500' },
   ] as const;
 
@@ -134,10 +134,10 @@ export default function Settings() {
       <main className="pt-12 px-4 max-w-2xl mx-auto">
         {/* User Profile Section */}
         <section className="flex flex-col items-center mb-8">
-          <div className="w-20 h-20 rounded-full bg-rose-50 flex items-center justify-center mb-4 border-2 border-white shadow-sm">
+          <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-4 border-2 border-white shadow-sm">
             <span className="material-symbols-outlined text-5xl text-slate-800">person</span>
           </div>
-          <h2 className="text-2xl font-bold text-slate-800 mb-1 tracking-tight">{getStudentId() || '用户'}</h2>
+          <h2 className="text-2xl font-bold text-slate-800 mb-1 tracking-tight">{getUserEmail() || '用户'}</h2>
           <div className="flex items-center text-sm text-slate-500">
             <span>NextClass 用户</span>
           </div>
@@ -191,7 +191,7 @@ export default function Settings() {
               await signOut();
               navigate('/login');
             }}
-            className="w-full py-3.5 bg-white text-rose-500 font-bold rounded-xl shadow-sm border border-rose-100/50 hover:bg-rose-50 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+            className="w-full py-3.5 bg-white text-primary font-bold rounded-xl shadow-sm border border-primary/20/50 hover:bg-primary/10 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
           >
             <span className="material-symbols-outlined">logout</span>
             退出登录
@@ -343,7 +343,7 @@ export default function Settings() {
                     </button>
                     <button
                       onClick={() => setEditPeriods(defaultPeriods)}
-                      className="text-sm text-amber-500 font-bold flex items-center gap-1 hover:bg-amber-50 px-3 py-1.5 rounded-lg transition-colors"
+                      className="text-sm text-primary font-bold flex items-center gap-1 hover:bg-primary/10 px-3 py-1.5 rounded-lg transition-colors"
                     >
                       <span className="material-symbols-outlined text-sm">refresh</span>
                       恢复默认
@@ -354,7 +354,7 @@ export default function Settings() {
                       onClick={() => {
                         setEditPeriods(editPeriods.slice(0, -1));
                       }}
-                      className="text-sm text-rose-500 font-bold flex items-center gap-1 hover:bg-rose-50 px-3 py-1.5 rounded-lg transition-colors"
+                      className="text-sm text-primary font-bold flex items-center gap-1 hover:bg-primary/10 px-3 py-1.5 rounded-lg transition-colors"
                     >
                       <span className="material-symbols-outlined text-sm">remove</span>
                       删除最后一节
@@ -367,7 +367,7 @@ export default function Settings() {
                 <div className="pt-4 mt-4 border-t border-slate-100">
                   <button
                     onClick={() => setShowDeleteConfirm(true)}
-                    className="w-full py-4 rounded-xl font-bold bg-rose-50 text-rose-500 hover:bg-rose-100 transition-colors flex items-center justify-center gap-2"
+                    className="w-full py-4 rounded-xl font-bold bg-primary/10 text-primary hover:bg-primary/10 transition-colors flex items-center justify-center gap-2"
                   >
                     <span className="material-symbols-outlined">delete</span>
                     删除课表
@@ -382,7 +382,7 @@ export default function Settings() {
       {showDeleteConfirm && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 px-4">
           <div className="bg-white rounded-dynamic p-6 w-full max-w-sm shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-            <h3 className="text-lg font-bold text-rose-600 mb-2">删除课表</h3>
+            <h3 className="text-lg font-bold text-primary mb-2">删除课表</h3>
             <p className="text-slate-600 mb-6">确定要删除这个课表吗？此操作不可恢复。</p>
             <div className="flex justify-end gap-3">
               <button
@@ -393,7 +393,7 @@ export default function Settings() {
               </button>
               <button
                 onClick={() => handleDeleteTimetable(editingTableId!)}
-                className="px-6 py-2 bg-rose-500 text-white rounded-full font-bold hover:bg-rose-600 transition-colors"
+                className="px-6 py-2 bg-primary text-white rounded-full font-bold hover:bg-primary transition-colors"
               >
                 删除
               </button>
