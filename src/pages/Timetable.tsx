@@ -10,15 +10,15 @@ export default function Timetable() {
   const navigate = useNavigate();
   const { courses } = useCourses();
   const { activeTimetable } = useSettings();
-  
+
   const [currentDate, setCurrentDate] = useState(getBeijingTime());
-  const { semesterStart, currentWeek: initialWeek } = useMemo(() => 
-    activeTimetable ? calculateCurrentWeek(currentDate, activeTimetable.startDate, activeTimetable.totalWeeks) : { semesterStart: new Date(), currentWeek: 1 }, 
-  [currentDate, activeTimetable?.startDate, activeTimetable?.totalWeeks]);
-  
+  const { semesterStart, currentWeek: initialWeek } = useMemo(() =>
+    activeTimetable ? calculateCurrentWeek(currentDate, activeTimetable.startDate, activeTimetable.totalWeeks) : { semesterStart: new Date(), currentWeek: 1 },
+    [currentDate, activeTimetable?.startDate, activeTimetable?.totalWeeks]);
+
   const [week, setWeek] = useState(
-    activeTimetable 
-      ? Math.max(1, Math.min(activeTimetable.totalWeeks, initialWeek)) 
+    activeTimetable
+      ? Math.max(1, Math.min(activeTimetable.totalWeeks, initialWeek))
       : 1
   );
   const [direction, setDirection] = useState(0);
@@ -42,10 +42,10 @@ export default function Timetable() {
     const startMonday = new Date(semesterStart);
     startMonday.setDate(semesterStart.getDate() - offsetToMondayStart);
     startMonday.setHours(0, 0, 0, 0);
-    
+
     const selectedMonday = new Date(startMonday);
     selectedMonday.setDate(startMonday.getDate() + (week - 1) * 7);
-    
+
     return Array.from({ length: 7 }, (_, i) => {
       const d = new Date(selectedMonday);
       d.setDate(selectedMonday.getDate() + i);
@@ -83,8 +83,8 @@ export default function Timetable() {
   };
 
   const EmptySlot: React.FC<{ day: number, periodId: number }> = ({ day, periodId }) => (
-    <div 
-      onClick={() => navigate('/editor', { state: { isNew: true, courseData: { day: (day + 1).toString(), periodStart: periodId.toString(), periodEnd: periodId.toString() } } })} 
+    <div
+      onClick={() => navigate('/editor', { state: { isNew: true, courseData: { day: (day + 1).toString(), periodStart: periodId.toString(), periodEnd: periodId.toString() } } })}
       className="bg-slate-50/50 rounded-dynamic m-[1px] cursor-pointer hover:bg-slate-100 transition-colors"
     ></div>
   );
@@ -115,7 +115,7 @@ export default function Timetable() {
     ...courses.filter(c => (c.timetableId || '1') === activeTimetable.id).map(c => c.periodEnd)
   );
   const grid = Array.from({ length: maxPeriod + 1 }, () => Array(7).fill(null));
-  const currentCourses = courses.filter(c => 
+  const currentCourses = courses.filter(c =>
     (c.timetableId || '1') === activeTimetable.id &&
     isCourseInWeek(c.weeks, week)
   );
@@ -177,15 +177,15 @@ export default function Timetable() {
             <div className="flex flex-col items-center justify-end pb-1" style={{ gridColumn: 1 }}>
               <span className="text-base font-black text-slate-900">{currentMonth}月</span>
             </div>
-            
+
             {/* Days Header */}
             {weekDates.map((d, i) => {
               const dayNames = ['一', '二', '三', '四', '五', '六', '日'];
               const isWeekend = i === 5 || i === 6;
-              const isToday = d.getFullYear() === currentDate.getFullYear() && 
-                              d.getMonth() === currentDate.getMonth() && 
-                              d.getDate() === currentDate.getDate();
-              
+              const isToday = d.getFullYear() === currentDate.getFullYear() &&
+                d.getMonth() === currentDate.getMonth() &&
+                d.getDate() === currentDate.getDate();
+
               return (
                 <div key={i} className="text-center pb-1 flex flex-col items-center">
                   <p className={`text-[10px] font-bold uppercase ${isWeekend ? 'text-rose-500' : 'text-slate-400'}`}>{dayNames[i]}</p>
@@ -209,15 +209,15 @@ export default function Timetable() {
                   if (cell) {
                     const span = cell.periodEnd - cell.periodStart + 1;
                     return (
-                      <div 
-                        key={`course-${period.id}-${day}`} 
+                      <div
+                        key={`course-${period.id}-${day}`}
                         className="relative"
                         style={{ gridRow: span > 1 ? `span ${span} / span ${span}` : undefined }}
                       >
-                        <div onClick={() => navigate('/editor', { state: { isNew: false, courseData: { id: cell.id, courseName: cell.name, teacher: cell.teacher || '', location: cell.location, weeks: cell.weeks || '1-16', day: cell.day.toString(), periodStart: cell.periodStart.toString(), periodEnd: cell.periodEnd.toString(), color: cell.color } } })} className="absolute inset-[1px] rounded-dynamic p-1.5 border-l-[3px] flex flex-col overflow-hidden active:scale-95 transition-all cursor-pointer hover:brightness-95" style={{ backgroundColor: cell.bg, borderColor: cell.color, opacity: 'var(--glass-opacity)' }}>
-                          <h3 className="text-[10px] font-bold text-slate-800 leading-tight">{cell.name}</h3>
-                          <p className="text-[8px] text-slate-500 mt-0.5 leading-none">{cell.location}</p>
-                          <p className="text-[8px] text-slate-400 mt-0.5 leading-none">{cell.teacher}</p>
+                        <div onClick={() => navigate('/editor', { state: { isNew: false, courseData: { id: cell.id, courseName: cell.name, teacher: cell.teacher || '', location: cell.location, weeks: cell.weeks || '1-16', day: cell.day.toString(), periodStart: cell.periodStart.toString(), periodEnd: cell.periodEnd.toString(), color: cell.color } } })} className={`absolute inset-[1px] rounded-dynamic p-0.5 border-l-[3px] flex flex-col justify-center items-center text-center overflow-hidden active:scale-95 transition-all cursor-pointer hover:brightness-95`} style={{ backgroundColor: cell.bg, borderColor: cell.color, opacity: 'var(--glass-opacity)' }}>
+                          <h3 className={`font-bold text-slate-800 leading-[1.15] ${span >= 3 ? 'text-[11px] mb-0.5' : 'text-[10px]'} w-[95%] break-words`}>{cell.name}</h3>
+                          {cell.location && <p className={`text-slate-500 leading-[1.1] ${span >= 3 ? 'text-[9px]' : 'text-[8px] scale-95'} w-[95%] break-words truncate whitespace-normal line-clamp-3`}>@{cell.location}</p>}
+                          {cell.teacher && <p className={`text-slate-400 leading-[1.1] ${span >= 3 ? 'text-[9px] mt-0.5' : 'text-[8px] scale-95'} w-[95%] break-words truncate`}>{cell.teacher}</p>}
                         </div>
                       </div>
                     );

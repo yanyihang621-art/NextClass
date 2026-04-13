@@ -25,10 +25,10 @@ export default function Settings() {
 
   const colors = [
     { id: 'purple', class: 'bg-[#6d23f9]' },
-    { id: 'blue', class: 'bg-blue-500' },
-    { id: 'emerald', class: 'bg-emerald-500' },
-    { id: 'rose', class: 'bg-primary' },
-    { id: 'amber', class: 'bg-primary' },
+    { id: 'blue', class: 'bg-[#008bff]' },
+    { id: 'emerald', class: 'bg-[#00b48e]' },
+    { id: 'rose', class: 'bg-[#ff007a]' },
+    { id: 'amber', class: 'bg-[#ff7a4b]' },
     { id: 'indigo', class: 'bg-indigo-500' },
   ] as const;
 

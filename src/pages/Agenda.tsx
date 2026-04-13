@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import BottomNav from '../components/BottomNav';
 import { useCourses } from '../contexts/CourseContext';
 import { useSettings } from '../contexts/SettingsContext';
-import { getBeijingTime } from '../lib/timeUtils';
+import { getBeijingTime, calculateCurrentWeek, isCourseInWeek } from '../lib/timeUtils';
 
 export default function Agenda() {
   const navigate = useNavigate();
@@ -29,10 +29,17 @@ export default function Agenda() {
   // Get today's courses
   const todayCourses = useMemo(() => {
     if (!activeTimetable) return [];
+    
+    const { currentWeek } = calculateCurrentWeek(currentDate, activeTimetable.startDate, activeTimetable.totalWeeks);
+
     return courses
-      .filter(c => (c.timetableId || '1') === activeTimetable.id && c.day === currentDay)
+      .filter(c => 
+        (c.timetableId || '1') === activeTimetable.id && 
+        c.day === currentDay &&
+        isCourseInWeek(c.weeks || '', currentWeek)
+      )
       .sort((a, b) => a.periodStart - b.periodStart);
-  }, [courses, currentDay, activeTimetable]);
+  }, [courses, currentDay, activeTimetable, currentDate]);
 
   // Helper to format time
   const formatTime = (timeStr: string) => {

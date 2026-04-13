@@ -39,10 +39,10 @@ const SettingsContext = createContext<SettingsContextType | undefined>(undefined
 
 const themeColors = {
   purple: { primary: '#6d23f9', container: '#e8ddff', onContainer: '#5300cd' },
-  blue: { primary: '#3b82f6', container: '#dbeafe', onContainer: '#1e3a8a' },
-  emerald: { primary: '#10b981', container: '#d1fae5', onContainer: '#064e3b' },
-  rose: { primary: '#f43f5e', container: '#ffe4e6', onContainer: '#881337' },
-  amber: { primary: '#f59e0b', container: '#fef3c7', onContainer: '#78350f' },
+  blue: { primary: '#008bff', container: '#dbeafe', onContainer: '#1e3a8a' },
+  emerald: { primary: '#00b48e', container: '#d1fae5', onContainer: '#064e3b' },
+  rose: { primary: '#ff007a', container: '#ffe4e6', onContainer: '#881337' },
+  amber: { primary: '#ff7a4b', container: '#fef3c7', onContainer: '#78350f' },
   indigo: { primary: '#6366f1', container: '#e0e7ff', onContainer: '#312e81' },
 };
 
