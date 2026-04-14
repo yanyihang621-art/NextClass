@@ -91,13 +91,13 @@ export default function Timetable() {
 
   if (!activeTimetable) {
     return (
-      <div className="text-on-surface min-h-screen font-body bg-white flex flex-col">
-        <header className="fixed top-0 w-full z-50 bg-glass shadow-sm px-4 py-3 flex justify-between items-center">
+      <div className="app-page text-on-surface font-body bg-white">
+        <header className="flex-shrink-0 bg-glass shadow-sm px-4 py-3 flex justify-between items-center z-10">
           <div className="flex items-center gap-3">
             <h1 className="font-black tracking-tight text-slate-900 text-lg">课表</h1>
           </div>
         </header>
-        <main className="flex-1 flex flex-col items-center justify-center p-6 text-center mt-20">
+        <main className="app-content flex flex-col items-center justify-center p-6 text-center">
           <span className="material-symbols-outlined text-6xl text-slate-300 mb-4">calendar_today</span>
           <h2 className="text-xl font-bold text-slate-700 mb-2">当前无课表，去导入</h2>
           <p className="text-slate-500 mb-8">您还没有创建任何课表，或者所有课表已被删除。</p>
@@ -130,18 +130,18 @@ export default function Timetable() {
   });
 
   return (
-    <div className="text-on-surface selection:bg-primary-container h-[100dvh] font-body bg-white overflow-hidden flex flex-col relative">
+    <div className="app-page text-on-surface selection:bg-primary-container font-body bg-white">
       {/* Header section fixed */}
       <div className="pt-4 px-2 pb-2 flex-shrink-0 z-10 bg-white/90 backdrop-blur-sm">
-        <div className="flex justify-between items-center px-2">
+        <div className="flex justify-between items-center px-1">
           <div className="flex flex-col">
-            <div className="flex items-center gap-1 -ml-1">
+            <div className="flex items-center gap-0.5 -ml-1">
               <button onClick={handlePrevWeek} className="p-1 hover:bg-slate-100 rounded-full transition-colors active:scale-90">
-                <span className="material-symbols-outlined text-lg">chevron_left</span>
+                <span className="material-symbols-outlined text-base">chevron_left</span>
               </button>
-              <span className="font-black tracking-tight text-slate-900 text-lg w-20 text-center">第 {week} 周</span>
+              <span className="font-black tracking-tight text-slate-900 text-base w-[3.5rem] text-center">第 {week} 周</span>
               <button onClick={handleNextWeek} className="p-1 hover:bg-slate-100 rounded-full transition-colors active:scale-90">
-                <span className="material-symbols-outlined text-lg">chevron_right</span>
+                <span className="material-symbols-outlined text-base">chevron_right</span>
               </button>
             </div>
             <div className="flex items-center gap-1.5 text-on-surface-variant font-medium text-[10px] pl-1">
@@ -160,7 +160,7 @@ export default function Timetable() {
         </div>
       </div>
 
-      <main className="flex-1 overflow-y-auto overflow-x-hidden px-2 pb-32 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+      <main className="app-content px-2 pb-4">
 
         <AnimatePresence mode="wait" custom={direction}>
           <motion.div
@@ -171,11 +171,11 @@ export default function Timetable() {
             animate="center"
             exit="exit"
             transition={{ duration: 0.2, ease: "easeInOut" }}
-            className="grid grid-cols-[2.5rem_repeat(7,1fr)] gap-1 md:gap-2"
+            className="grid grid-cols-[1.875rem_repeat(7,1fr)] gap-1 md:gap-2"
           >
             {/* Header Spacer */}
-            <div className="flex flex-col items-center justify-end pb-1" style={{ gridColumn: 1 }}>
-              <span className="text-base font-black text-slate-900">{currentMonth}月</span>
+            <div className="flex flex-col items-center justify-end pb-1 pr-0.5" style={{ gridColumn: 1 }}>
+              <span className="text-sm font-black text-slate-900">{currentMonth}月</span>
             </div>
 
             {/* Days Header */}
@@ -198,10 +198,10 @@ export default function Timetable() {
 
             {activeTimetable.periods.map(period => (
               <React.Fragment key={`period-${period.id}`}>
-                <div className="flex flex-col items-center justify-center" style={{ height: 'var(--cell-height, 4.5rem)', gridColumn: 1 }}>
+                <div className="flex flex-col items-center justify-center -mr-1" style={{ height: 'var(--cell-height, 4.5rem)', gridColumn: 1 }}>
                   <span className="text-[11px] font-black leading-none">{period.id}</span>
-                  <span className="text-[8px] text-slate-400 font-bold mt-1">{period.start}</span>
-                  <span className="text-[8px] text-slate-400 font-bold">{period.end}</span>
+                  <span className="text-[7px] text-slate-400 font-bold mt-1 tracking-tighter">{period.start}</span>
+                  <span className="text-[7px] text-slate-400 font-bold tracking-tighter">{period.end}</span>
                 </div>
                 {[0, 1, 2, 3, 4, 5, 6].map(day => {
                   const cell = grid[period.id][day];

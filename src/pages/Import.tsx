@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BottomNav from '../components/BottomNav';
 import SchoolSelector from '../components/SchoolSelector';
@@ -6,6 +6,7 @@ import ImportContainer from '../components/ImportContainer';
 import { useCourses } from '../contexts/CourseContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { smartParseSchedule } from '../lib/parseSchedule';
+import type { ParsedCourse } from '../lib/parseSchedule';
 import type { School } from '../data/schools';
 import type { Course } from '../contexts/CourseContext';
 
@@ -66,9 +67,31 @@ export default function Import() {
     }
   };
 
+  /** 处理自动导入（InAppBrowser）返回的已解析课程数组 */
+  const handleCoursesImported = useCallback((parsed: ParsedCourse[]) => {
+    for (const pc of parsed) {
+      const course: Course = {
+        id: `import_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        timetableId: activeTimetable?.id,
+        name: pc.name,
+        teacher: pc.teacher,
+        location: pc.location,
+        weeks: pc.weeks,
+        day: pc.day,
+        periodStart: pc.periodStart,
+        periodEnd: pc.periodEnd,
+        color: '',
+        bg: '',
+      };
+      addCourse(course);
+    }
+    setParseResult({ count: parsed.length });
+    setTimeout(() => navigate('/'), 1500);
+  }, [activeTimetable, addCourse, navigate]);
+
   return (
-    <div className="bg-[#F7F7F9] text-on-surface min-h-screen pb-28 font-body">
-      <main className="pt-6 px-4 max-w-2xl mx-auto">
+    <div className="app-page bg-[#F7F7F9] text-on-surface font-body">
+      <main className="app-content pt-6 px-4 pb-4 max-w-2xl mx-auto">
         <section className="mb-12">
           <div className="flex items-center gap-3 mb-6">
             <span className="material-symbols-outlined text-primary text-3xl">school</span>
@@ -176,6 +199,7 @@ export default function Import() {
           school={selectedSchool}
           onBack={() => setView('school-selector')}
           onStartParsing={handleStartParsing}
+          onCoursesImported={handleCoursesImported}
         />
       )}
     </div>

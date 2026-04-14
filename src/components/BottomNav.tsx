@@ -18,7 +18,10 @@ export default function BottomNav() {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 w-full flex justify-around items-center px-2 pb-4 pt-1.5 bg-glass shadow-[0_-10px_40px_rgba(0,0,0,0.05)] rounded-t-[2rem] z-50">
+    <nav
+      className="flex-shrink-0 flex justify-around items-center px-2 pt-1.5 bg-glass shadow-[0_-10px_40px_rgba(0,0,0,0.05)] rounded-t-[2rem] z-50"
+      style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+    >
       {navItems.map((item) => {
         const isActive = path === item.path;
         return (

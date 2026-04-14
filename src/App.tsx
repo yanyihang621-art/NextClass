@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -17,8 +18,18 @@ import CourseEditor from './pages/CourseEditor';
 import NextClass from './pages/NextClass';
 import ResetPassword from './pages/ResetPassword';
 import ScrollToTop from './components/ScrollToTop';
+import { Capacitor } from '@capacitor/core';
+import { StatusBar, Style } from '@capacitor/status-bar';
 
 export default function App() {
+  useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      StatusBar.setOverlaysWebView({ overlay: true });
+      StatusBar.setStyle({ style: Style.Dark });
+      StatusBar.setBackgroundColor({ color: '#00000000' });
+    }
+  }, []);
+
   return (
     <AuthProvider>
       <SettingsProvider>

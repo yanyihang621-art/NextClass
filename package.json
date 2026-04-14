@@ -11,6 +11,10 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
+    "@capacitor/android": "^8.3.0",
+    "@capacitor/core": "^8.3.0",
+    "@capacitor/status-bar": "^8.0.2",
+    "@capgo/inappbrowser": "^8.5.5",
     "@supabase/supabase-js": "^2.100.1",
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-react": "^5.0.4",
@@ -23,6 +27,7 @@
     "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.3.0",
     "@types/node": "^22.14.0",
     "autoprefixer": "^10.4.21",
     "tailwindcss": "^4.1.14",

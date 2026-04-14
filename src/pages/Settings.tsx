@@ -130,8 +130,8 @@ export default function Settings() {
   };
 
   return (
-    <div className="bg-[#F7F7F9] text-on-surface min-h-screen pb-28 font-body">
-      <main className="pt-12 px-4 max-w-2xl mx-auto">
+    <div className="app-page bg-[#F7F7F9] text-on-surface font-body">
+      <main className="app-content pt-12 px-2 pb-4 max-w-2xl mx-auto">
         {/* User Profile Section */}
         <section className="flex flex-col items-center mb-8">
           <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-4 border-2 border-white shadow-sm">
@@ -185,7 +185,7 @@ export default function Settings() {
           </button>
         </section>
 
-        <section className="mb-6 px-4">
+        <section className="mb-6">
           <button
             onClick={async () => {
               await signOut();
@@ -202,7 +202,7 @@ export default function Settings() {
       {/* Timetable Management Modal */}
       {isTimetableManageOpen && (
         <div className="fixed inset-0 z-[90] flex flex-col bg-[#F7F7F9] animate-in slide-in-from-right duration-300">
-          <div className="flex items-center justify-between p-4 bg-[#F7F7F9] sticky top-0 z-10">
+          <div className="flex items-center justify-between p-4 bg-[#F7F7F9] sticky top-0 z-10" style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))' }}>
             <button onClick={() => setIsTimetableManageOpen(false)} className="p-2 -ml-2 rounded-full hover:bg-slate-200 transition-colors">
               <span className="material-symbols-outlined text-slate-800">arrow_back_ios_new</span>
             </button>
@@ -437,7 +437,7 @@ export default function Settings() {
       {/* Personalization Modal */}
       {isPersonalizationOpen && (
         <div className="fixed inset-0 z-[90] flex flex-col bg-[#F7F7F9] animate-in slide-in-from-right duration-300">
-          <div className="flex items-center justify-between p-4 bg-[#F7F7F9] sticky top-0 z-10">
+          <div className="flex items-center justify-between p-4 bg-[#F7F7F9] sticky top-0 z-10" style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))' }}>
             <button onClick={handleCancelPersonalization} className="p-2 -ml-2 rounded-full hover:bg-slate-200 transition-colors">
               <span className="material-symbols-outlined text-slate-800">arrow_back_ios_new</span>
             </button>

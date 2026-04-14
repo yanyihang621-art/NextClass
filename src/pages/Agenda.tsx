@@ -52,8 +52,8 @@ export default function Agenda() {
 
   if (!activeTimetable) {
     return (
-      <div className="text-on-surface min-h-screen pb-28 font-body bg-white flex flex-col">
-        <main className="flex-1 flex flex-col items-center justify-center p-6 text-center mt-6">
+      <div className="app-page text-on-surface font-body bg-white">
+        <main className="app-content flex flex-col items-center justify-center p-6 text-center">
           <span className="material-symbols-outlined text-6xl text-slate-300 mb-4">event_busy</span>
           <h2 className="text-xl font-bold text-slate-700 mb-2">当前无课表，去导入</h2>
           <p className="text-slate-500 mb-8">您还没有创建任何课表，或者所有课表已被删除。</p>
@@ -67,8 +67,8 @@ export default function Agenda() {
   }
 
   return (
-    <div className="text-on-surface min-h-screen pb-28 font-body bg-white">
-      <main className="pt-6 px-4 max-w-2xl mx-auto">
+    <div className="app-page text-on-surface font-body bg-white">
+      <main className="app-content pt-6 px-4 max-w-2xl mx-auto">
         <section className="mb-8">
           <div className="flex justify-between items-start mb-2">
             <div>
@@ -124,7 +124,9 @@ export default function Agenda() {
         </div>
       </main>
 
-      <Link to="/editor" state={{ isNew: true }} className="fixed bottom-24 right-4 w-14 h-14 bg-primary text-on-primary rounded-full shadow-2xl flex items-center justify-center transition-transform active:scale-90 hover:shadow-primary/40 z-50">
+      <Link to="/editor" state={{ isNew: true }} className="absolute bottom-20 right-4 w-14 h-14 bg-primary text-on-primary rounded-full shadow-2xl flex items-center justify-center transition-transform active:scale-90 hover:shadow-primary/40 z-40"
+        style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
+      >
         <span className="material-symbols-outlined text-3xl">add</span>
       </Link>
 

@@ -32,23 +32,35 @@ html {
   background-color: #f1f5f9;
   display: flex;
   justify-content: center;
-  /* Hide desktop scrollbars */
-  overflow-y: scroll;
+  /* Hide desktop scrollbars — entire scrolling is handled inside the app shell */
+  overflow: hidden;
+  height: 100%;
 }
 
 body {
   font-family: var(--font-body);
   background-color: var(--color-surface);
   color: var(--color-on-surface);
-  min-height: max(884px, 100dvh);
+  height: 100%;
   width: 100%;
   max-width: 480px;
+  margin: 0;
   position: relative;
   /* Crucial: create a containing block for 'fixed' modals so they don't leak out of the 480px mobile frame */
   transform: translateZ(0); 
   box-shadow: 0 0 40px rgba(0,0,0,0.05), 0 0 10px rgba(0,0,0,0.02);
   /* Prevent horizontal scroll inside mobile frame */
   overflow-x: hidden;
+  overflow-y: hidden;
+  /* Fill the safe area background */
+  padding-top: env(safe-area-inset-top);
+}
+
+#root {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .material-symbols-outlined {
@@ -67,4 +79,31 @@ body {
   background-color: rgba(255, 255, 255, var(--glass-opacity, 0.8));
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
+}
+
+/* ============================================================
+   Native-like App Shell Layout Utilities
+   ============================================================ */
+
+/* Page container: fills the full viewport, flex column layout */
+.app-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Scrollable content area between header and bottom nav */
+.app-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  /* Hide scrollbar for a cleaner native feel */
+  scrollbar-width: none;           /* Firefox */
+  -ms-overflow-style: none;        /* IE/Edge */
+}
+.app-content::-webkit-scrollbar {
+  display: none;                   /* Chrome/Safari */
 }
