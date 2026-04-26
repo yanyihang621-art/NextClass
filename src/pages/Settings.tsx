@@ -143,10 +143,11 @@ export default function Settings() {
           </div>
         </section>
 
-        {/* Promotional Banner Placeholder */}
+        {/* Version Banner — for OTA hot update testing */}
         <section className="mb-6">
-          <div className="h-20 bg-slate-100/50 rounded-2xl border border-dashed border-slate-200 flex items-center justify-center text-slate-400 text-sm">
-            空白占位符
+          <div className="h-20 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-2xl border border-purple-100/60 flex items-center justify-center text-purple-600 text-sm font-bold tracking-wide gap-2">
+            <span className="material-symbols-outlined text-lg">system_update</span>
+            🚀 热更新测试 · 版本 A
           </div>
         </section>
 

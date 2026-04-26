@@ -14,6 +14,7 @@
     "@capacitor/android": "^8.3.0",
     "@capacitor/core": "^8.3.0",
     "@capacitor/status-bar": "^8.0.2",
+    "@capgo/capacitor-updater": "^8.45.9",
     "@capgo/inappbrowser": "^8.5.5",
     "@supabase/supabase-js": "^2.100.1",
     "@tailwindcss/vite": "^4.1.14",
