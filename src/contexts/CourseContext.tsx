@@ -104,10 +104,20 @@ function courseToDbRow(course: Course) {
 
 export const CourseProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
-  const [courses, setCourses] = useState<Course[]>([]);
+
+  // ── 离线优先：同步从 localStorage 加载缓存作为初始状态，保证 UI 瞬间渲染 ──
+  const [courses, setCourses] = useState<Course[]>(() => {
+    if (!user) return [];
+    const cacheKey = `courses_${user.id}`;
+    try {
+      const saved = localStorage.getItem(cacheKey);
+      if (saved) return JSON.parse(saved) as Course[];
+    } catch { /* ignore */ }
+    return [];
+  });
   const [loading, setLoading] = useState(true);
 
-  // Load courses from Supabase on mount
+  // 后台从 Supabase 拉取最新数据，成功后刷新本地状态 + 更新缓存
   useEffect(() => {
     if (!user) {
       setCourses([]);
@@ -116,26 +126,37 @@ export const CourseProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
 
     const cacheKey = `courses_${user.id}`;
+
+    // 同步恢复缓存（处理 user 变更时的场景）
+    try {
+      const saved = localStorage.getItem(cacheKey);
+      if (saved) {
+        const cached = JSON.parse(saved) as Course[];
+        setCourses(cached);
+      }
+    } catch { /* ignore */ }
+
     const fetchCourses = async () => {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('courses')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('day')
-        .order('period_start');
-      
-      if (error) {
-        console.error('Failed to fetch courses from Supabase:', error);
-        // Fallback to user-scoped localStorage
-        const saved = localStorage.getItem(cacheKey);
-        if (saved) {
-          try { setCourses(JSON.parse(saved)); } catch (e) { /* ignore */ }
+      try {
+        const { data, error } = await supabase
+          .from('courses')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('day')
+          .order('period_start');
+
+        if (error) {
+          console.error('Failed to fetch courses from Supabase:', error);
+          // 网络失败时保持 localStorage 缓存的数据，不清空
+        } else if (data) {
+          const parsed = data.map(dbRowToCourse);
+          setCourses(parsed);
+          localStorage.setItem(cacheKey, JSON.stringify(parsed));
         }
-      } else if (data) {
-        const parsed = data.map(dbRowToCourse);
-        setCourses(parsed);
-        localStorage.setItem(cacheKey, JSON.stringify(parsed));
+      } catch (e) {
+        console.error('Network error fetching courses:', e);
+        // 完全离线时静默失败，继续使用缓存数据
       }
       setLoading(false);
     };

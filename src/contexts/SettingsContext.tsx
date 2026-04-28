@@ -118,11 +118,27 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => { localStorage.setItem('cornerRadius', String(cornerRadius)); }, [cornerRadius]);
   useEffect(() => { localStorage.setItem('cellHeight', String(cellHeight)); }, [cellHeight]);
 
-  // Timetables — stored in Supabase
-  const [timetables, setTimetablesState] = useState<TimetableConfig[]>([]);
+  // ── 离线优先：同步从 localStorage 加载课表配置，保证 UI 瞬间渲染 ──
+  const [timetables, setTimetablesState] = useState<TimetableConfig[]>(() => {
+    if (!user) return [];
+    const cacheKey = `timetables_${user.id}`;
+    try {
+      const saved = localStorage.getItem(cacheKey);
+      if (saved) {
+        const parsed = JSON.parse(saved) as TimetableConfig[];
+        return parsed.map(t => {
+          if (!t.periods || t.periods.length !== 20) {
+            return { ...t, periods: defaultPeriods };
+          }
+          return t;
+        });
+      }
+    } catch { /* ignore */ }
+    return [];
+  });
   const [loading, setLoading] = useState(true);
 
-  // Load timetables from Supabase on mount
+  // 后台从 Supabase 拉取最新数据，成功后刷新本地状态 + 更新缓存
   useEffect(() => {
     if (!user) {
       setTimetablesState([]);
@@ -131,33 +147,41 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     }
 
     const cacheKey = `timetables_${user.id}`;
+
+    // 同步恢复缓存（处理 user 变更时的场景）
+    try {
+      const saved = localStorage.getItem(cacheKey);
+      if (saved) {
+        const parsed = JSON.parse(saved) as TimetableConfig[];
+        setTimetablesState(parsed.map(t => {
+          if (!t.periods || t.periods.length !== 20) {
+            return { ...t, periods: defaultPeriods };
+          }
+          return t;
+        }));
+      }
+    } catch { /* ignore */ }
+
     const fetchTimetables = async () => {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('timetables')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at');
+      try {
+        const { data, error } = await supabase
+          .from('timetables')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at');
 
-      if (error) {
-        console.error('Failed to fetch timetables from Supabase:', error);
-        // Fallback to user-scoped localStorage
-        const saved = localStorage.getItem(cacheKey);
-        if (saved) {
-          try {
-            const parsed = JSON.parse(saved);
-            setTimetablesState(parsed.map((t: TimetableConfig) => {
-              if (!t.periods || t.periods.length !== 20) {
-                return { ...t, periods: defaultPeriods };
-              }
-              return t;
-            }));
-          } catch (e) { /* ignore */ }
+        if (error) {
+          console.error('Failed to fetch timetables from Supabase:', error);
+          // 网络失败时保持 localStorage 缓存的数据，不清空
+        } else if (data) {
+          const parsed = data.map(dbRowToTimetable);
+          setTimetablesState(parsed);
+          localStorage.setItem(cacheKey, JSON.stringify(parsed));
         }
-      } else if (data) {
-        const parsed = data.map(dbRowToTimetable);
-        setTimetablesState(parsed);
-        localStorage.setItem(cacheKey, JSON.stringify(parsed));
+      } catch (e) {
+        console.error('Network error fetching timetables:', e);
+        // 完全离线时静默失败，继续使用缓存数据
       }
       setLoading(false);
     };
