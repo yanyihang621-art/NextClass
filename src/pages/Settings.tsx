@@ -143,7 +143,7 @@ export default function Settings() {
           </div>
         </section>
 
-        {/* Version Banner — for OTA hot update testing */}
+        {/* Version Banner */}
         <section className="mb-6">
           <div className="h-20 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-2xl border border-purple-100/60 flex items-center justify-center text-purple-600 text-sm font-bold tracking-wide gap-2">
             <span className="material-symbols-outlined text-lg">system_update</span>

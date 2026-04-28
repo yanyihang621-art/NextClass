@@ -3,12 +3,12 @@ import type { CapacitorConfig } from '@capacitor/cli';
 const config: CapacitorConfig = {
   appId: 'top.nextclass.app',
   appName: 'NextClass',
-  webDir: 'dist'
-  plugins: {
-    CapacitorUpdater: {
-      autoUpdate: false, // 设为 false，因为我们已经在 React 代码里写了更灵活的更新逻辑
-    }
-  }
+  webDir: 'dist',
+  server: {
+    // TODO: 替换为你真实的 Vercel 部署域名
+    url: 'https://YOUR_VERCEL_APP_URL.vercel.app',
+    cleartext: true,
+  },
 };
 
 export default config;

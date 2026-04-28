@@ -20,7 +20,6 @@ import ResetPassword from './pages/ResetPassword';
 import ScrollToTop from './components/ScrollToTop';
 import { Capacitor } from '@capacitor/core';
 import { StatusBar, Style } from '@capacitor/status-bar';
-import { CapacitorUpdater } from '@capgo/capacitor-updater';
 
 export default function App() {
   // --- StatusBar setup ---
@@ -30,38 +29,6 @@ export default function App() {
       StatusBar.setStyle({ style: Style.Dark });
       StatusBar.setBackgroundColor({ color: '#00000000' });
     }
-  }, []);
-
-  // --- Capgo OTA Hot Update ---
-  useEffect(() => {
-    if (!Capacitor.isNativePlatform()) return;
-
-    // Action A: Send heartbeat immediately — tells Capgo the current
-    // bundle loaded successfully and should NOT be rolled back.
-    CapacitorUpdater.notifyAppReady();
-
-    // Action B: Silently check, download, and apply updates.
-    const checkForUpdate = async () => {
-      try {
-        const latest = await CapacitorUpdater.download({
-          url: '',      // Capgo cloud resolves the URL automatically
-          version: '0.0.0', // placeholder; Capgo picks the latest
-        });
-
-        // A new bundle was downloaded — apply it and reload the WebView.
-        if (latest?.version) {
-          console.log('[Capgo] New version downloaded:', latest.version);
-          await CapacitorUpdater.set({ id: latest.id });
-          // set() triggers an automatic WebView reload.
-        }
-      } catch (err) {
-        // Network failure or no update available — silently log and
-        // let the user continue using the current version.
-        console.error('[Capgo] Update check failed (non-blocking):', err);
-      }
-    };
-
-    checkForUpdate();
   }, []);
 
   return (
