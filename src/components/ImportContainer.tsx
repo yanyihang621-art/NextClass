@@ -300,58 +300,65 @@ export default function ImportContainer({ school, onBack, onStartParsing, onCour
         )}
       </div>
 
-      {/* Bottom fixed button */}
-      <div className="sticky bottom-0 px-4 py-4 bg-gradient-to-t from-[#F7F7F9] via-[#F7F7F9] to-transparent pt-8"
-        style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
-      >
-        {isNativeApp ? (
-          // ── App 环境按钮 ──
-          status === 'idle' || status === 'error' ? (
+      {/* Bottom fixed button area */}
+      {/* FAB for browsing state (Native only) */}
+      {isNativeApp && status === 'browsing' && (
+        <button
+          onClick={captureNow}
+          className="fixed bottom-24 right-6 z-[95] w-auto px-5 py-3.5 rounded-full bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold text-sm shadow-2xl shadow-green-600/30 hover:brightness-110 active:scale-95 transition-all flex items-center gap-2 animate-bounce"
+          style={{ marginBottom: 'max(0px, env(safe-area-inset-bottom))' }}
+        >
+          <span className="material-symbols-outlined text-xl">auto_awesome</span>
+          抓取课表
+        </button>
+      )}
+
+      {/* Full-width bottom bar for non-browsing states */}
+      {!(isNativeApp && status === 'browsing') && (
+        <div className="sticky bottom-0 px-4 py-4 bg-gradient-to-t from-[#F7F7F9] via-[#F7F7F9] to-transparent pt-8"
+          style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+        >
+          {isNativeApp ? (
+            // ── App 环境按钮 ──
+            status === 'idle' || status === 'error' ? (
+              <button
+                onClick={handleStartAutoImport}
+                className="w-full py-3.5 bg-primary text-white rounded-xl font-bold text-base hover:brightness-110 active:scale-[0.98] transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
+              >
+                <span className="material-symbols-outlined text-xl">open_in_browser</span>
+                打开教务系统
+              </button>
+            ) : status === 'extracting' ? (
+              <button disabled className="w-full py-3.5 bg-slate-300 text-white rounded-xl font-bold text-base flex items-center justify-center gap-2 cursor-not-allowed">
+                <span className="material-symbols-outlined text-xl animate-spin">sync</span>
+                正在抓取…
+              </button>
+            ) : status === 'success' ? (
+              <button
+                onClick={() => {
+                  if (onCoursesImported && courses.length > 0) {
+                    onCoursesImported(courses);
+                  }
+                }}
+                className="w-full py-3.5 bg-green-600 text-white rounded-xl font-bold text-base hover:brightness-110 active:scale-[0.98] transition-all shadow-lg shadow-green-600/20 flex items-center justify-center gap-2"
+              >
+                <span className="material-symbols-outlined text-xl">check</span>
+                确认导入 {courses.length} 门课程
+              </button>
+            ) : null
+          ) : (
+            // ── Web 环境按钮 ──
             <button
-              onClick={handleStartAutoImport}
-              className="w-full py-3.5 bg-primary text-white rounded-xl font-bold text-base hover:brightness-110 active:scale-[0.98] transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
-            >
-              <span className="material-symbols-outlined text-xl">open_in_browser</span>
-              打开教务系统
-            </button>
-          ) : status === 'browsing' ? (
-            <button
-              onClick={captureNow}
-              className="w-full py-3.5 bg-green-600 text-white rounded-xl font-bold text-base hover:brightness-110 active:scale-[0.98] transition-all shadow-lg shadow-green-600/20 flex items-center justify-center gap-2 animate-pulse"
+              onClick={handleParse}
+              disabled={!htmlSource.trim()}
+              className="w-full py-3.5 bg-primary text-white rounded-xl font-bold text-base hover:brightness-110 active:scale-[0.98] transition-all shadow-lg shadow-primary/20 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               <span className="material-symbols-outlined text-xl">auto_awesome</span>
-              抓取课表
+              一键解析课表
             </button>
-          ) : status === 'extracting' ? (
-            <button disabled className="w-full py-3.5 bg-slate-300 text-white rounded-xl font-bold text-base flex items-center justify-center gap-2 cursor-not-allowed">
-              <span className="material-symbols-outlined text-xl animate-spin">sync</span>
-              正在抓取…
-            </button>
-          ) : status === 'success' ? (
-            <button
-              onClick={() => {
-                if (onCoursesImported && courses.length > 0) {
-                  onCoursesImported(courses);
-                }
-              }}
-              className="w-full py-3.5 bg-green-600 text-white rounded-xl font-bold text-base hover:brightness-110 active:scale-[0.98] transition-all shadow-lg shadow-green-600/20 flex items-center justify-center gap-2"
-            >
-              <span className="material-symbols-outlined text-xl">check</span>
-              确认导入 {courses.length} 门课程
-            </button>
-          ) : null
-        ) : (
-          // ── Web 环境按钮 ──
-          <button
-            onClick={handleParse}
-            disabled={!htmlSource.trim()}
-            className="w-full py-3.5 bg-primary text-white rounded-xl font-bold text-base hover:brightness-110 active:scale-[0.98] transition-all shadow-lg shadow-primary/20 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-          >
-            <span className="material-symbols-outlined text-xl">auto_awesome</span>
-            一键解析课表
-          </button>
-        )}
-      </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

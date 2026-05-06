@@ -573,8 +573,40 @@ export function parseScheduleFragment(htmlFragment: string): ParsedCourse[] {
   return parseScheduleData(wrappedHtml);
 }
 
+// ═════════════════════════════════════════════════════════════════════════════
+// 多教务系统 Parser 路由
+// ═════════════════════════════════════════════════════════════════════════════
+
 /**
- * 智能解析入口：自动判断输入类型并选择解析策略
+ * 强智教务系统解析器（占位）
+ * TODO: 实现真实的强智系统 HTML 表格解析
+ */
+function parseQiangzhi(htmlString: string): ParsedCourse[] {
+  console.warn('[parseSchedule] 强智教务系统解析器尚未实现，将使用通用解析。');
+  // 强智系统的表格结构与正方类似，暂时复用通用解析逻辑
+  return parseScheduleData(htmlString, 'qiangzhi');
+}
+
+/**
+ * 金智教务系统解析器（占位）
+ * TODO: 实现真实的金智系统 HTML 解析
+ */
+function parseKingosoft(htmlString: string): ParsedCourse[] {
+  console.warn('[parseSchedule] 金智教务系统解析器尚未实现，将使用通用解析。');
+  return parseScheduleData(htmlString, 'kingosoft');
+}
+
+/**
+ * 通用文本提取解析器（兜底）
+ * 提取页面中所有 <table> 并尝试匹配课表结构
+ */
+function parseGeneric(htmlString: string): ParsedCourse[] {
+  console.warn('[parseSchedule] 使用通用解析器（兜底）。');
+  return parseScheduleData(htmlString, 'generic');
+}
+
+/**
+ * 智能解析入口：根据 systemType 路由到不同的解析器
  */
 export function smartParseSchedule(
   input: string,
@@ -585,18 +617,41 @@ export function smartParseSchedule(
   const isFullPage = /<!doctype|<html|<head|<body/i.test(trimmed);
   const hasTable = /<table[\s>]/i.test(trimmed);
 
-  if (isFullPage || hasTable) {
-    const result = parseScheduleData(trimmed, systemType);
-    if (result.length === 0 && isFullPage) {
-      console.warn(
-        '[parseSchedule] 完整页面中未找到课表数据。\n' +
-        '正方系统 V9.0 的课表通过 AJAX 动态加载，"查看源代码" 中不含课表。\n' +
-        '请改为：在已加载课表的页面按 F12 → 选择 #table1 元素 → 右键 "Copy outerHTML"'
-      );
-    }
-    return result;
+  if (!isFullPage && !hasTable) {
+    console.warn('[parseSchedule] 输入不像有效的 HTML 内容');
+    return [];
   }
 
-  console.warn('[parseSchedule] 输入不像有效的 HTML 内容');
-  return [];
+  // ── 根据教务系统类型路由到对应解析器 ──
+  let result: ParsedCourse[];
+
+  switch (systemType) {
+    case 'zhengfang':
+      result = parseScheduleData(trimmed, systemType);
+      break;
+
+    case 'qiangzhi':
+      result = parseQiangzhi(trimmed);
+      break;
+
+    case 'kingosoft':
+      result = parseKingosoft(trimmed);
+      break;
+
+    case 'generic':
+    case 'custom':
+    default:
+      result = parseGeneric(trimmed);
+      break;
+  }
+
+  if (result.length === 0 && isFullPage) {
+    console.warn(
+      '[parseSchedule] 完整页面中未找到课表数据。\n' +
+      '正方系统 V9.0 的课表通过 AJAX 动态加载，"查看源代码" 中不含课表。\n' +
+      '请改为：在已加载课表的页面按 F12 → 选择 #table1 元素 → 右键 "Copy outerHTML"'
+    );
+  }
+
+  return result;
 }
