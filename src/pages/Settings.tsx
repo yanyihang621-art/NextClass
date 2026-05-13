@@ -21,7 +21,7 @@ export default function Settings() {
     cellHeight, setCellHeight,
     timetables, setTimetables
   } = useSettings();
-  const { deleteCoursesByTimetable } = useCourses();
+  const { deleteCoursesByTimetable, addCourse } = useCourses();
   const { getUserEmail, signOut } = useAuth();
 
   const colors = [
@@ -126,14 +126,25 @@ export default function Settings() {
         setEditingTableId(null);
 
         if (pendingImport) {
-          navigate('/editor', {
-            state: {
-              importedCourses: pendingImport,
-              importMode: 'overwrite',
-              autoTitle: editName
-            },
-            replace: true
+          // 直接将解析到的课程存入新课表
+          pendingImport.forEach(c => {
+            addCourse({
+              id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
+              timetableId: newTimetableId,
+              name: c.name,
+              teacher: c.teacher || '',
+              location: c.location,
+              weeks: c.weeks || '1-16',
+              day: c.day,
+              periodStart: c.periodStart,
+              periodEnd: c.periodEnd,
+              color: '',
+              bg: ''
+            });
           });
+
+          // 完成后直接跳转到课表页
+          navigate('/timetable', { replace: true });
           return;
         }
 

@@ -5,6 +5,7 @@ import BottomNav from '../components/BottomNav';
 import SchoolSelector from '../components/SchoolSelector';
 import ImportContainer from '../components/ImportContainer';
 import { useSettings } from '../contexts/SettingsContext';
+import { useCourses } from '../contexts/CourseContext';
 import { smartParseSchedule } from '../lib/parseSchedule';
 import type { ParsedCourse } from '../lib/parseSchedule';
 import type { School } from '../data/schools';
@@ -30,6 +31,7 @@ type ImportAction = 'overwrite' | 'create-new' | 'cancel';
 export default function Import() {
   const navigate = useNavigate();
   const { activeTimetable } = useSettings();
+  const { addCourse, deleteCoursesByTimetable } = useCourses();
 
   const [view, setView] = useState<ImportView>('home');
   const [selectedSchool, setSelectedSchool] = useState<School | null>(null);
@@ -50,17 +52,6 @@ export default function Import() {
   // 核心：将 ParsedCourse[] 通过 router state 传递给 CourseEditor
   // ═══════════════════════════════════════════════════════════════════════
 
-  /** 跳转到编辑器页面，让用户预览/编辑后再保存 */
-  const navigateToEditor = useCallback((parsed: ParsedCourse[], mode: 'overwrite' | 'create-new') => {
-    navigate('/editor', {
-      state: {
-        importedCourses: parsed,
-        importMode: mode,
-        autoTitle: '导入的课表',
-      },
-    });
-  }, [navigate]);
-
   // ── 处理确认对话框的选择 ──
   const handleConfirmAction = useCallback((action: ImportAction) => {
     setShowConfirmDialog(false);
@@ -76,12 +67,33 @@ export default function Import() {
           pendingImport: pendingCourses 
         } 
       });
-    } else {
-      // 将数据带到编辑器页面预览并覆盖当前课表
-      navigateToEditor(pendingCourses, action);
+    } else if (action === 'overwrite') {
+      if (!activeTimetable) {
+        alert('当前没有激活的课表');
+        return;
+      }
+      // 直接覆盖当前课表数据
+      deleteCoursesByTimetable(activeTimetable.id);
+      pendingCourses.forEach(c => {
+        addCourse({
+          id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
+          timetableId: activeTimetable.id,
+          name: c.name,
+          teacher: c.teacher || '',
+          location: c.location,
+          weeks: c.weeks || '1-16',
+          day: c.day,
+          periodStart: c.periodStart,
+          periodEnd: c.periodEnd,
+          color: '',
+          bg: ''
+        });
+      });
+      // 成功后直接跳转到课表页面
+      navigate('/timetable', { replace: true });
     }
     setPendingCourses(null);
-  }, [pendingCourses, navigateToEditor, navigate]);
+  }, [pendingCourses, activeTimetable, addCourse, deleteCoursesByTimetable, navigate]);
 
   // ═══════════════════════════════════════════════════════════════════════
   // 解析回调

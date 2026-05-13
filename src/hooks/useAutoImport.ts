@@ -138,7 +138,26 @@ const FAB_INJECT_SCRIPT = `
   // 创建一个顶层容器，挂在 documentElement 上而非 body
   var root = document.createElement('div');
   root.id = 'nextclass-fab-root';
-  root.style.cssText = 'position:fixed!important;bottom:24px!important;right:24px!important;z-index:2147483647!important;pointer-events:auto!important;transform:none!important;will-change:auto!important;';
+  // 使用 absolute 配合 visualViewport 动态定位，彻底解决移动端 WebView 缩放/滚动时 fixed 定位乱飘或消失的问题
+  root.style.cssText = 'position:absolute!important;z-index:2147483647!important;pointer-events:auto!important;opacity:0;transition:opacity 0.3s;';
+  
+  var updatePosition = function() {
+    var vpX = window.visualViewport ? window.visualViewport.pageLeft : window.scrollX;
+    var vpY = window.visualViewport ? window.visualViewport.pageTop : window.scrollY;
+    var vpW = window.visualViewport ? window.visualViewport.width : window.innerWidth;
+    var vpH = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    
+    root.style.left = (vpX + vpW - 24) + 'px';
+    root.style.top = (vpY + vpH - 24) + 'px';
+    root.style.transform = 'translate(-100%, -100%)';
+  };
+
+  window.addEventListener('scroll', updatePosition, {passive: true});
+  window.addEventListener('resize', updatePosition, {passive: true});
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('scroll', updatePosition);
+    window.visualViewport.addEventListener('resize', updatePosition);
+  }
 
   // 使用 Shadow DOM 隔离样式，避免被页面 CSS 覆盖
   var shadow = root.attachShadow({ mode: 'closed' });
@@ -210,6 +229,12 @@ const FAB_INJECT_SCRIPT = `
 
   // 挂到 documentElement 确保不受 body 的 transform/overflow 影响
   document.documentElement.appendChild(root);
+
+  // 初始化显示
+  setTimeout(function() {
+    updatePosition();
+    root.style.opacity = '1';
+  }, 100);
 })();
 `;
 
