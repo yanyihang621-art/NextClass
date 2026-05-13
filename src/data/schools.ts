@@ -11,7 +11,7 @@ export interface School {
 }
 
 export const SCHOOLS: School[] = [
-  { id: '1', name: '北京化工大学', pinyin_initial: 'B', login_url: 'https://jwgl.buct.edu.cn', system_type: 'zhengfang' },
+  { id: '1', name: '北京化工大学', pinyin_initial: 'B', login_url: 'https://jwglxt.buct.edu.cn/', system_type: 'zhengfang' },
   { id: '2', name: '北京大学', pinyin_initial: 'B', login_url: 'https://dean.pku.edu.cn', system_type: 'custom' },
   { id: '3', name: '北京理工大学', pinyin_initial: 'B', login_url: 'https://jwgl.bit.edu.cn', system_type: 'zhengfang' },
   { id: '4', name: '北京航空航天大学', pinyin_initial: 'B', login_url: 'https://jwxt.buaa.edu.cn', system_type: 'zhengfang' },
