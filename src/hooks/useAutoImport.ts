@@ -6,13 +6,13 @@
  * 核心流程：
  *   1. openWebView → 加载教务系统登录页
  *   2. 用户在浏览器中登录 & 导航到课表页
- *   3. 用户点击 App 悬浮的「抓取」按钮（或 URL 自动匹配后触发）
- *   4. executeScript 注入 JS → 复制 outerHTML 到系统剪贴板
- *   5. close() 关闭浏览器 → 从剪贴板读取 HTML → 交给 smartParseSchedule
+ *   3. 用户点击 WebView 内注入的悬浮「抓取课表」按钮
+ *   4. 注入脚本抓取 outerHTML → 通过 mobileApp.postMessage 传回原生层
+ *   5. 原生层接收 HTML → 关闭浏览器 → 交给 smartParseSchedule 解析
  *
  * 数据回传策略：
- *   @capgo/inappbrowser 的 executeScript 是 fire-and-forget（不返回值），
- *   因此我们将 HTML 写入系统剪贴板，关闭浏览器后在 App 主线程读取。
+ *   通过 @capgo/inappbrowser 的 postMessage 原生通信桥直接传递 HTML 字符串，
+ *   完全不依赖剪贴板，兼容 HTTP 非安全环境。
  *
  * URL 管理策略：
  *   - 每个 school 的可用 URL 以 `CUSTOM_EAS_URL:<schoolId>` 为 key 持久化到 localStorage
@@ -90,6 +90,129 @@ function normalizeUrl(raw: string): string {
   return trimmed;
 }
 
+// ─── 注入脚本：抓取 HTML 并通过 postMessage 发回 ─────────────────────────
+
+/**
+ * 注入到 WebView 中的抓取脚本。
+ * 抓取完整的 document.documentElement.outerHTML，
+ * 然后通过 window.mobileApp.postMessage 发送回原生层。
+ * 不使用剪贴板，兼容 HTTP 环境。
+ */
+const CAPTURE_SCRIPT = `
+(function() {
+  try {
+    var html = document.documentElement.outerHTML;
+    if (!html || html.length < 100) {
+      window.mobileApp.postMessage({
+        action: 'captureError',
+        error: '页面内容为空或过短，请确保页面已完全加载'
+      });
+      return;
+    }
+    window.mobileApp.postMessage({
+      action: 'htmlCaptured',
+      html: html
+    });
+  } catch(e) {
+    window.mobileApp.postMessage({
+      action: 'captureError',
+      error: e.message || '未知错误'
+    });
+  }
+})();
+`;
+
+// ─── FAB 注入脚本 ────────────────────────────────────────────────────────
+
+/**
+ * 注入到 WebView 中的悬浮按钮脚本。
+ * 点击按钮时直接执行 CAPTURE_SCRIPT 的逻辑（抓取 HTML + postMessage）。
+ * 使用 Shadow DOM 隔离样式，挂载到 documentElement 避免受 body transform 影响。
+ */
+const FAB_INJECT_SCRIPT = `
+(function() {
+  // 移除旧按钮（如果存在）
+  var old = document.getElementById('nextclass-fab-root');
+  if (old) old.remove();
+
+  // 创建一个顶层容器，挂在 documentElement 上而非 body
+  var root = document.createElement('div');
+  root.id = 'nextclass-fab-root';
+  root.style.cssText = 'position:fixed!important;bottom:24px!important;right:24px!important;z-index:2147483647!important;pointer-events:auto!important;transform:none!important;will-change:auto!important;';
+
+  // 使用 Shadow DOM 隔离样式，避免被页面 CSS 覆盖
+  var shadow = root.attachShadow({ mode: 'closed' });
+  var style = document.createElement('style');
+  style.textContent = \`
+    .nc-fab {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: linear-gradient(135deg, #22c55e, #059669);
+      color: white;
+      font-weight: 700;
+      font-size: 14px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      border: none;
+      border-radius: 50px;
+      padding: 14px 22px;
+      box-shadow: 0 8px 24px rgba(5, 150, 105, 0.4);
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      line-height: 1;
+    }
+    .nc-fab:active { transform: scale(0.93); box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3); }
+    .nc-icon { font-size: 20px; line-height: 1; }
+  \`;
+  shadow.appendChild(style);
+
+  var btn = document.createElement('button');
+  btn.className = 'nc-fab';
+  btn.innerHTML = '<span class="nc-icon">✨</span>抓取课表';
+  btn.addEventListener('click', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    btn.innerHTML = '<span class="nc-icon">⏳</span>抓取中...';
+    btn.style.pointerEvents = 'none';
+    btn.style.opacity = '0.7';
+
+    // 直接抓取 HTML 并通过原生桥发回（不经过剪贴板）
+    try {
+      var html = document.documentElement.outerHTML;
+      if (!html || html.length < 100) {
+        window.mobileApp.postMessage({
+          action: 'captureError',
+          error: '页面内容为空或过短，请确保页面已完全加载'
+        });
+        // 恢复按钮状态
+        btn.innerHTML = '<span class="nc-icon">✨</span>抓取课表';
+        btn.style.pointerEvents = 'auto';
+        btn.style.opacity = '1';
+        return;
+      }
+      window.mobileApp.postMessage({
+        action: 'htmlCaptured',
+        html: html
+      });
+    } catch(err) {
+      window.mobileApp.postMessage({
+        action: 'captureError',
+        error: err.message || '未知错误'
+      });
+      btn.innerHTML = '<span class="nc-icon">✨</span>抓取课表';
+      btn.style.pointerEvents = 'auto';
+      btn.style.opacity = '1';
+    }
+  }, true);
+  shadow.appendChild(btn);
+
+  // 挂到 documentElement 确保不受 body 的 transform/overflow 影响
+  document.documentElement.appendChild(root);
+})();
+`;
+
 // ─── Hook ────────────────────────────────────────────────────────────────
 
 export function useAutoImport(): UseAutoImportReturn {
@@ -111,57 +234,22 @@ export function useAutoImport(): UseAutoImportReturn {
     activeUrlRef.current = effective;
   }, []);
 
-  // ── 抓取当前页面 ────────────────────────────────────────────────────
+  // ── 处理 WebView 传回的 HTML（核心解析逻辑） ────────────────────────
 
-  const captureNow = useCallback(async () => {
+  const handleHtmlCaptured = useCallback(async (rawHtml: string) => {
     setStatus('extracting');
     setError(null);
 
     try {
-      // Step 1: 注入脚本 → 将整个 HTML 复制到系统剪贴板
-      await InAppBrowser.executeScript({
-        code: `
-(function(){
-  try {
-    var html = document.documentElement.outerHTML;
-    var ta = document.createElement('textarea');
-    ta.value = html;
-    ta.setAttribute('readonly','');
-    ta.style.cssText = 'position:fixed;opacity:0;left:-9999px';
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand('copy');
-    document.body.removeChild(ta);
-    document.title = 'NextClass_OK_' + html.length;
-  } catch(e) {
-    document.title = 'NextClass_ERR_' + e.message;
-  }
-})();
-        `,
-      });
+      // 关闭内置浏览器
+      try { await InAppBrowser.close(); } catch { /* already closed */ }
 
-      // 等待脚本执行完成
-      await new Promise(r => setTimeout(r, 800));
-
-      // Step 2: 关闭内置浏览器
-      await InAppBrowser.close();
-
-      // Step 3: 从剪贴板读取 HTML
-      await new Promise(r => setTimeout(r, 300));
-
-      let html = '';
-      try {
-        html = await navigator.clipboard.readText();
-      } catch {
-        throw new Error('无法读取剪贴板。请授予剪贴板权限后重试。');
+      if (!rawHtml || rawHtml.length < 100 || !/<[a-z]/i.test(rawHtml)) {
+        throw new Error('未能读取到页面内容，请确保已进入课表查询页。');
       }
 
-      if (!html || html.length < 100 || !/<[a-z]/i.test(html)) {
-        throw new Error('剪贴板中未找到有效的 HTML 数据。请确保已在课表页面后重试。');
-      }
-
-      // Step 4: 解析（使用自动识别模式）
-      const parsed = smartParseSchedule(html, 'auto');
+      // 解析（使用自动识别模式）
+      const parsed = smartParseSchedule(rawHtml, 'auto');
 
       if (parsed.length === 0) {
         throw new Error(
@@ -173,13 +261,29 @@ export function useAutoImport(): UseAutoImportReturn {
         );
       }
 
-      // Step 5: 成功 → 持久化当前有效 URL
+      // 成功 → 持久化当前有效 URL
       saveEffectiveUrl(schoolIdRef.current, activeUrlRef.current);
 
       setCourses(parsed);
       setStatus('success');
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
+      setStatus('error');
+    }
+  }, []);
+
+  // ── 手动触发抓取（注入脚本方式，不依赖剪贴板） ──────────────────────
+
+  const captureNow = useCallback(async () => {
+    setStatus('extracting');
+    setError(null);
+
+    try {
+      // 注入脚本 → 抓取 HTML 并通过 postMessage 发回
+      // 数据将通过 messageFromWebview 事件接收并由 handleHtmlCaptured 处理
+      await InAppBrowser.executeScript({ code: CAPTURE_SCRIPT });
+    } catch (err) {
+      setError(`注入脚本失败: ${err instanceof Error ? err.message : String(err)}`);
       setStatus('error');
     }
   }, []);
@@ -232,82 +336,36 @@ export function useAutoImport(): UseAutoImportReturn {
         setStatus(prev => (prev === 'browsing' ? 'idle' : prev));
       });
 
-      // 注入悬浮抓取按钮（使用独立容器 + Shadow DOM 防止被页面样式影响）
+      // 每次页面加载完成后注入悬浮抓取按钮
       await InAppBrowser.addListener('browserPageLoaded', () => {
-        InAppBrowser.executeScript({
-          code: `
-            (function() {
-              // 移除旧按钮（如果存在）
-              var old = document.getElementById('nextclass-fab-root');
-              if (old) old.remove();
-
-              // 创建一个顶层容器，挂在 documentElement 上而非 body
-              var root = document.createElement('div');
-              root.id = 'nextclass-fab-root';
-              root.style.cssText = 'position:fixed!important;bottom:24px!important;right:24px!important;z-index:2147483647!important;pointer-events:auto!important;transform:none!important;will-change:auto!important;';
-
-              // 使用 Shadow DOM 隔离样式，避免被页面 CSS 覆盖
-              var shadow = root.attachShadow({ mode: 'closed' });
-              var style = document.createElement('style');
-              style.textContent = '\\
-                .nc-fab {\\
-                  display: flex;\\
-                  align-items: center;\\
-                  gap: 6px;\\
-                  background: linear-gradient(135deg, #22c55e, #059669);\\
-                  color: white;\\
-                  font-weight: 700;\\
-                  font-size: 14px;\\
-                  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;\\
-                  border: none;\\
-                  border-radius: 50px;\\
-                  padding: 14px 22px;\\
-                  box-shadow: 0 8px 24px rgba(5, 150, 105, 0.4);\\
-                  cursor: pointer;\\
-                  transition: transform 0.15s ease, box-shadow 0.15s ease;\\
-                  -webkit-tap-highlight-color: transparent;\\
-                  user-select: none;\\
-                  line-height: 1;\\
-                }\\
-                .nc-fab:active { transform: scale(0.93); box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3); }\\
-                .nc-icon { font-size: 20px; line-height: 1; }\\
-              ';
-              shadow.appendChild(style);
-
-              var btn = document.createElement('button');
-              btn.className = 'nc-fab';
-              btn.innerHTML = '<span class="nc-icon">✨</span>抓取课表';
-              btn.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                btn.innerHTML = '<span class="nc-icon">⏳</span>抓取中...';
-                btn.style.pointerEvents = 'none';
-                btn.style.opacity = '0.7';
-                if (window.mobileApp && window.mobileApp.postMessage) {
-                  window.mobileApp.postMessage({ action: 'captureNow' });
-                }
-              }, true);
-              shadow.appendChild(btn);
-
-              // 挂到 documentElement 确保不受 body 的 transform/overflow 影响
-              document.documentElement.appendChild(root);
-            })();
-          `
-        });
+        InAppBrowser.executeScript({ code: FAB_INJECT_SCRIPT });
       });
 
-      // 接收按钮点击事件
+      // 接收 WebView 通过 postMessage 发回的消息
       await InAppBrowser.addListener('messageFromWebview', (event: any) => {
-        const data = event?.detail || event;
-        if (data?.action === 'captureNow' || data?.message?.action === 'captureNow' || data?.detail?.action === 'captureNow') {
+        // @capgo/inappbrowser 的消息格式可能嵌套在不同层级
+        const msg = event?.detail || event;
+        const action = msg?.action || msg?.message?.action || msg?.detail?.action;
+
+        if (action === 'htmlCaptured') {
+          // 收到抓取的 HTML → 解析
+          const html = msg?.html || msg?.message?.html || msg?.detail?.html || '';
+          handleHtmlCaptured(html);
+        } else if (action === 'captureNow') {
+          // 兼容：如果仍收到 captureNow 动作，注入抓取脚本
           captureNow();
+        } else if (action === 'captureError') {
+          // 抓取出错
+          const errMsg = msg?.error || msg?.message?.error || msg?.detail?.error || '未知错误';
+          setError(`抓取失败: ${errMsg}`);
+          setStatus('error');
         }
       });
     } catch (err) {
       setError(`无法打开浏览器: ${err instanceof Error ? err.message : String(err)}`);
       setStatus('error');
     }
-  }, [currentUrl, captureNow]);
+  }, [currentUrl, captureNow, handleHtmlCaptured]);
 
   // ── 动态跳转到新 URL（浏览器打开期间） ──────────────────────────────
 
@@ -340,7 +398,6 @@ export function useAutoImport(): UseAutoImportReturn {
       }
     }
   }, []);
-
 
   // ── 取消 ────────────────────────────────────────────────────────────
 
