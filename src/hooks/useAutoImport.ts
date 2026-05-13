@@ -138,32 +138,49 @@ const FAB_INJECT_SCRIPT = `
   // 创建一个顶层容器，挂在 documentElement 上而非 body
   var root = document.createElement('div');
   root.id = 'nextclass-fab-root';
-  // 使用 absolute 配合 visualViewport 动态定位，彻底解决移动端 WebView 缩放/滚动时 fixed 定位乱飘或消失的问题
-  root.style.cssText = 'position:absolute!important;z-index:2147483647!important;pointer-events:auto!important;opacity:0;transition:opacity 0.3s;';
+  // 采用 0x0 锚点绝对定位方案，随视觉视口移动，彻底解决固定定位移动或组件消失的问题
+  root.style.cssText = 'position:absolute!important; z-index:2147483647!important; pointer-events:none!important; width:0!important; height:0!important; overflow:visible!important;';
   
   var updatePosition = function() {
-    var vpX = window.visualViewport ? window.visualViewport.pageLeft : window.scrollX;
-    var vpY = window.visualViewport ? window.visualViewport.pageTop : window.scrollY;
+    var vpX = window.visualViewport ? window.visualViewport.pageLeft : window.scrollX || document.documentElement.scrollLeft || 0;
+    var vpY = window.visualViewport ? window.visualViewport.pageTop : window.scrollY || document.documentElement.scrollTop || 0;
     var vpW = window.visualViewport ? window.visualViewport.width : window.innerWidth;
     var vpH = window.visualViewport ? window.visualViewport.height : window.innerHeight;
     
-    root.style.left = (vpX + vpW - 24) + 'px';
-    root.style.top = (vpY + vpH - 24) + 'px';
-    root.style.transform = 'translate(-100%, -100%)';
+    root.style.left = (vpX + vpW) + 'px';
+    root.style.top = (vpY + vpH) + 'px';
   };
 
-  window.addEventListener('scroll', updatePosition, {passive: true});
-  window.addEventListener('resize', updatePosition, {passive: true});
+  var ticking = false;
+  var requestUpdate = function() {
+    if (!ticking) {
+      window.requestAnimationFrame(function() {
+        updatePosition();
+        ticking = false;
+      });
+      ticking = true;
+    }
+  };
+
+  window.addEventListener('scroll', requestUpdate, {passive: true});
+  window.addEventListener('resize', requestUpdate, {passive: true});
   if (window.visualViewport) {
-    window.visualViewport.addEventListener('scroll', updatePosition);
-    window.visualViewport.addEventListener('resize', updatePosition);
+    window.visualViewport.addEventListener('scroll', requestUpdate);
+    window.visualViewport.addEventListener('resize', requestUpdate);
   }
+  
+  // 初始定位与兜底刷新
+  updatePosition();
+  setInterval(updatePosition, 500);
 
   // 使用 Shadow DOM 隔离样式，避免被页面 CSS 覆盖
   var shadow = root.attachShadow({ mode: 'closed' });
   var style = document.createElement('style');
   style.textContent = \`
     .nc-fab {
+      position: absolute;
+      bottom: 24px;
+      right: 24px;
       display: flex;
       align-items: center;
       gap: 6px;
@@ -181,6 +198,8 @@ const FAB_INJECT_SCRIPT = `
       -webkit-tap-highlight-color: transparent;
       user-select: none;
       line-height: 1;
+      pointer-events: auto;
+      white-space: nowrap;
     }
     .nc-fab:active { transform: scale(0.93); box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3); }
     .nc-icon { font-size: 20px; line-height: 1; }
@@ -229,12 +248,6 @@ const FAB_INJECT_SCRIPT = `
 
   // 挂到 documentElement 确保不受 body 的 transform/overflow 影响
   document.documentElement.appendChild(root);
-
-  // 初始化显示
-  setTimeout(function() {
-    updatePosition();
-    root.style.opacity = '1';
-  }, 100);
 })();
 `;
 
