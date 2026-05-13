@@ -111,83 +111,6 @@ export function useAutoImport(): UseAutoImportReturn {
     activeUrlRef.current = effective;
   }, []);
 
-  // ── 打开浏览器 ──────────────────────────────────────────────────────
-
-  const startImport = useCallback(async (loginUrl: string, systemType: string, schoolId?: string) => {
-    setCourses([]);
-    setError(null);
-    systemTypeRef.current = systemType;
-    schoolIdRef.current = schoolId;
-
-    // 确定最终要加载的 URL
-    const urlToLoad = normalizeUrl(currentUrl || loginUrl);
-    activeUrlRef.current = urlToLoad;
-    setCurrentUrl(urlToLoad);
-
-    if (!Capacitor.isNativePlatform()) {
-      setError('自动导入仅支持 App 环境');
-      setStatus('error');
-      return;
-    }
-
-    try {
-      setStatus('browsing');
-
-      await InAppBrowser.openWebView({
-        url: urlToLoad,
-        title: '教务系统',
-        toolbarColor: '#6d23f9',
-        showArrow: true,
-        isPresentAfterPageLoad: true,
-      });
-
-      // 监听 URL 变化 → 同步到 React 状态
-      await InAppBrowser.addListener('urlChangeEvent', (event: any) => {
-        if (event?.url) {
-          activeUrlRef.current = event.url;
-          setCurrentUrl(event.url);
-        }
-      });
-
-      // 监听浏览器关闭 → 重置状态（如果用户自己关了）
-      await InAppBrowser.addListener('closeEvent', () => {
-        setStatus(prev => (prev === 'browsing' ? 'idle' : prev));
-      });
-    } catch (err) {
-      setError(`无法打开浏览器: ${err instanceof Error ? err.message : String(err)}`);
-      setStatus('error');
-    }
-  }, [currentUrl]);
-
-  // ── 动态跳转到新 URL（浏览器打开期间） ──────────────────────────────
-
-  const navigateTo = useCallback(async (url: string) => {
-    const normalized = normalizeUrl(url);
-    if (!normalized) return;
-    activeUrlRef.current = normalized;
-    setCurrentUrl(normalized);
-
-    try {
-      await InAppBrowser.setUrl({ url: normalized });
-    } catch (err) {
-      // 如果 setUrl 失败（浏览器可能已关闭），尝试重新打开
-      console.warn('[useAutoImport] setUrl failed, retrying with openWebView', err);
-      try {
-        await InAppBrowser.openWebView({
-          url: normalized,
-          title: '教务系统',
-          toolbarColor: '#6d23f9',
-          showArrow: true,
-          isPresentAfterPageLoad: true,
-        });
-        setStatus('browsing');
-      } catch (e2) {
-        setError(`无法打开浏览器: ${e2 instanceof Error ? e2.message : String(e2)}`);
-        setStatus('error');
-      }
-    }
-  }, []);
-
   // ── 抓取当前页面 ────────────────────────────────────────────────────
 
   const captureNow = useCallback(async () => {
@@ -260,6 +183,116 @@ export function useAutoImport(): UseAutoImportReturn {
       setStatus('error');
     }
   }, []);
+
+  // ── 打开浏览器 ──────────────────────────────────────────────────────
+
+  const startImport = useCallback(async (loginUrl: string, systemType: string, schoolId?: string) => {
+    setCourses([]);
+    setError(null);
+    systemTypeRef.current = systemType;
+    schoolIdRef.current = schoolId;
+
+    // 确定最终要加载的 URL
+    const urlToLoad = normalizeUrl(currentUrl || loginUrl);
+    activeUrlRef.current = urlToLoad;
+    setCurrentUrl(urlToLoad);
+
+    if (!Capacitor.isNativePlatform()) {
+      setError('自动导入仅支持 App 环境');
+      setStatus('error');
+      return;
+    }
+
+    try {
+      setStatus('browsing');
+
+      await InAppBrowser.openWebView({
+        url: urlToLoad,
+        title: '教务系统',
+        toolbarColor: '#6d23f9',
+        showArrow: true,
+        isPresentAfterPageLoad: true,
+      });
+
+      // 监听 URL 变化 → 同步到 React 状态
+      await InAppBrowser.addListener('urlChangeEvent', (event: any) => {
+        if (event?.url) {
+          activeUrlRef.current = event.url;
+          setCurrentUrl(event.url);
+        }
+      });
+
+      // 监听浏览器关闭 → 重置状态（如果用户自己关了）
+      await InAppBrowser.addListener('closeEvent', () => {
+        setStatus(prev => (prev === 'browsing' ? 'idle' : prev));
+      });
+
+      // 注入悬浮按钮
+      await InAppBrowser.addListener('browserPageLoaded', () => {
+        InAppBrowser.executeScript({
+          code: `
+            (function() {
+              if (document.getElementById('nextclass-capture-btn')) return;
+              var btn = document.createElement('button');
+              btn.id = 'nextclass-capture-btn';
+              btn.innerHTML = '<span style="font-size:20px;margin-right:4px;">✨</span>抓取课表';
+              btn.style.cssText = 'position:fixed;bottom:max(24px, env(safe-area-inset-bottom));right:24px;z-index:9999999;background:linear-gradient(to right, #22c55e, #059669);color:white;font-weight:bold;font-size:14px;border:none;border-radius:50px;padding:14px 20px;box-shadow:0 10px 15px -3px rgba(22, 163, 74, 0.3), 0 4px 6px -4px rgba(22, 163, 74, 0.3);display:flex;align-items:center;cursor:pointer;transition:transform 0.1s;';
+              btn.onclick = function() {
+                btn.style.transform = 'scale(0.95)';
+                setTimeout(function(){ btn.style.transform = 'scale(1)'; }, 100);
+                btn.innerHTML = '<span style="font-size:18px;margin-right:6px;">⏳</span>抓取中...';
+                if (window.mobileApp && window.mobileApp.postMessage) {
+                  window.mobileApp.postMessage({ action: 'captureNow' });
+                }
+              };
+              document.body.appendChild(btn);
+            })();
+          `
+        });
+      });
+
+      // 接收按钮点击事件
+      await InAppBrowser.addListener('messageFromWebview', (event: any) => {
+        const data = event?.detail || event;
+        if (data?.action === 'captureNow' || data?.message?.action === 'captureNow' || data?.detail?.action === 'captureNow') {
+          captureNow();
+        }
+      });
+    } catch (err) {
+      setError(`无法打开浏览器: ${err instanceof Error ? err.message : String(err)}`);
+      setStatus('error');
+    }
+  }, [currentUrl, captureNow]);
+
+  // ── 动态跳转到新 URL（浏览器打开期间） ──────────────────────────────
+
+  const navigateTo = useCallback(async (url: string) => {
+    const normalized = normalizeUrl(url);
+    if (!normalized) return;
+    activeUrlRef.current = normalized;
+    setCurrentUrl(normalized);
+
+    try {
+      await InAppBrowser.setUrl({ url: normalized });
+    } catch (err) {
+      // 如果 setUrl 失败（浏览器可能已关闭），尝试重新打开
+      console.warn('[useAutoImport] setUrl failed, retrying with openWebView', err);
+      try {
+        await InAppBrowser.openWebView({
+          url: normalized,
+          title: '教务系统',
+          toolbarColor: '#6d23f9',
+          showArrow: true,
+          isPresentAfterPageLoad: true,
+        });
+        setStatus('browsing');
+      } catch (e2) {
+        setError(`无法打开浏览器: ${e2 instanceof Error ? e2.message : String(e2)}`);
+        setStatus('error');
+      }
+    }
+  }, []);
+
 
   // ── 取消 ────────────────────────────────────────────────────────────
 

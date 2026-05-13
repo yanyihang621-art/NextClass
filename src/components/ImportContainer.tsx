@@ -311,18 +311,6 @@ export default function ImportContainer({ school, onBack, onStartParsing, onCour
       </div>
 
       {/* Bottom fixed button area */}
-      {/* FAB for browsing state (Native only) */}
-      {isNativeApp && status === 'browsing' && (
-        <button
-          onClick={captureNow}
-          className="fixed bottom-24 right-6 z-[95] w-auto px-5 py-3.5 rounded-full bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold text-sm shadow-2xl shadow-green-600/30 hover:brightness-110 active:scale-95 transition-all flex items-center gap-2 animate-bounce"
-          style={{ marginBottom: 'max(0px, env(safe-area-inset-bottom))' }}
-        >
-          <span className="material-symbols-outlined text-xl">auto_awesome</span>
-          抓取课表
-        </button>
-      )}
-
       {/* Full-width bottom bar for non-browsing states */}
       {!(isNativeApp && status === 'browsing') && (
         <div className="sticky bottom-0 px-4 py-4 bg-gradient-to-t from-[#F7F7F9] via-[#F7F7F9] to-transparent pt-8"
