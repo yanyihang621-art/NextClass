@@ -66,10 +66,20 @@ export default function Import() {
       setPendingCourses(null);
       return;
     }
-    // 将数据带到编辑器页面
-    navigateToEditor(pendingCourses, action);
+    
+    if (action === 'create-new') {
+      navigate('/settings', { 
+        state: { 
+          openCreateTimetable: true, 
+          pendingImport: pendingCourses 
+        } 
+      });
+    } else {
+      // 将数据带到编辑器页面预览并覆盖当前课表
+      navigateToEditor(pendingCourses, action);
+    }
     setPendingCourses(null);
-  }, [pendingCourses, navigateToEditor]);
+  }, [pendingCourses, navigateToEditor, navigate]);
 
   // ═══════════════════════════════════════════════════════════════════════
   // 解析回调

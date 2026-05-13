@@ -39,6 +39,7 @@ export default function Settings() {
   const [editStartDate, setEditStartDate] = useState('');
   const [editTotalWeeks, setEditTotalWeeks] = useState(20);
   const [editPeriods, setEditPeriods] = useState(defaultPeriods);
+  const [pendingImport, setPendingImport] = useState<any[] | null>(null);
 
   useEffect(() => {
     if (location.state?.openCreateTimetable) {
@@ -48,11 +49,23 @@ export default function Settings() {
       setEditStartDate(getBeijingTime().toISOString().split('T')[0]);
       setEditTotalWeeks(20);
       setEditPeriods(defaultPeriods);
+      
+      if (location.state?.pendingImport) {
+        setPendingImport(location.state.pendingImport);
+      }
 
       // Clear the state so it doesn't reopen on refresh
       window.history.replaceState({}, document.title);
     }
   }, [location.state]);
+
+  const closeEditModal = () => {
+    setEditingTableId(null);
+    if (pendingImport) {
+      setPendingImport(null);
+      navigate(-1);
+    }
+  };
 
   const [isPersonalizationOpen, setIsPersonalizationOpen] = useState(false);
   const [initialPersonalization, setInitialPersonalization] = useState<any>(null);
@@ -92,15 +105,37 @@ export default function Settings() {
   const handleEditSave = () => {
     if (editingTableId && editName.trim()) {
       if (editingTableId === 'new') {
-        setTimetables([...timetables, {
-          id: Date.now().toString(),
+        const newTimetableId = Date.now().toString();
+        const newTimetable = {
+          id: newTimetableId,
           name: editName,
           term: '',
-          active: timetables.length === 0,
+          active: timetables.length === 0 || !!pendingImport,
           startDate: editStartDate || '2024-09-01',
           totalWeeks: editTotalWeeks,
           periods: editPeriods
-        }]);
+        };
+        const updated = timetables.map(t => ({
+          ...t,
+          active: newTimetable.active ? false : t.active
+        }));
+        updated.push(newTimetable);
+        setTimetables(updated);
+        
+        setEditingTableId(null);
+
+        if (pendingImport) {
+          navigate('/editor', {
+            state: {
+              importedCourses: pendingImport,
+              importMode: 'overwrite',
+              autoTitle: editName
+            },
+            replace: true
+          });
+          return;
+        }
+
       } else {
         setTimetables(timetables.map(t => t.id === editingTableId ? {
           ...t,
@@ -273,7 +308,7 @@ export default function Settings() {
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
           <div className="bg-white rounded-dynamic w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl animate-in fade-in zoom-in-95 duration-200 flex flex-col">
             <div className="flex justify-between items-center p-4 border-b border-slate-100 sticky top-0 bg-white z-10">
-              <button onClick={() => setEditingTableId(null)} className="p-2 -ml-2 rounded-full hover:bg-slate-100 transition-colors">
+              <button onClick={closeEditModal} className="p-2 -ml-2 rounded-full hover:bg-slate-100 transition-colors">
                 <span className="material-symbols-outlined text-slate-600">close</span>
               </button>
               <h3 className="font-bold text-lg">{editingTableId === 'new' ? '新建课表' : '编辑课表'}</h3>
