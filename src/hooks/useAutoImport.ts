@@ -126,59 +126,64 @@ const CAPTURE_SCRIPT = `
 
 /**
  * 注入到 WebView 中的悬浮按钮脚本。
- * 点击按钮时直接执行 CAPTURE_SCRIPT 的逻辑（抓取 HTML + postMessage）。
- * 使用 Shadow DOM 隔离样式，挂载到 documentElement 避免受 body transform 影响。
+ *
+ * 定位策略（解决 Android WebView 中 position:fixed 随页面滚动/缩放飘移的问题）：
+ *   1. 注入 viewport meta 标签，防止页面被 WebView 自动缩放导致 fixed 失效
+ *   2. 创建一个全屏 fixed overlay（pointer-events:none），按钮在 overlay 右下角（pointer-events:auto）
+ *   3. 主动清除 <html> 和 <body> 上的 transform / will-change / perspective，
+ *      因为 CSS 规范规定这些属性会创建新的 containing block，使 fixed 降级为 absolute
+ *   4. 使用 MutationObserver 持续监控，防止页面 JS 重新设置 transform
  */
 const FAB_INJECT_SCRIPT = `
 (function() {
-  // 移除旧按钮（如果存在）
-  var old = document.getElementById('nextclass-fab-root');
+  // ── 0. 移除旧实例 ──
+  var old = document.getElementById('nextclass-fab-overlay');
   if (old) old.remove();
 
-  // 创建一个顶层容器，挂在 documentElement 上而非 body
-  var root = document.createElement('div');
-  root.id = 'nextclass-fab-root';
-  // 采用 0x0 锚点绝对定位方案，随视觉视口移动，彻底解决固定定位移动或组件消失的问题
-  root.style.cssText = 'position:absolute!important; z-index:2147483647!important; pointer-events:none!important; width:0!important; height:0!important; overflow:visible!important;';
-  
-  var updatePosition = function() {
-    var vpX = window.visualViewport ? window.visualViewport.pageLeft : window.scrollX || document.documentElement.scrollLeft || 0;
-    var vpY = window.visualViewport ? window.visualViewport.pageTop : window.scrollY || document.documentElement.scrollTop || 0;
-    var vpW = window.visualViewport ? window.visualViewport.width : window.innerWidth;
-    var vpH = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-    
-    root.style.left = (vpX + vpW) + 'px';
-    root.style.top = (vpY + vpH) + 'px';
-  };
-
-  var ticking = false;
-  var requestUpdate = function() {
-    if (!ticking) {
-      window.requestAnimationFrame(function() {
-        updatePosition();
-        ticking = false;
-      });
-      ticking = true;
-    }
-  };
-
-  window.addEventListener('scroll', requestUpdate, {passive: true});
-  window.addEventListener('resize', requestUpdate, {passive: true});
-  if (window.visualViewport) {
-    window.visualViewport.addEventListener('scroll', requestUpdate);
-    window.visualViewport.addEventListener('resize', requestUpdate);
+  // ── 1. 注入 viewport meta（如果页面没有的话） ──
+  if (!document.querySelector('meta[name="viewport"]')) {
+    var meta = document.createElement('meta');
+    meta.name = 'viewport';
+    meta.content = 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no';
+    document.head.appendChild(meta);
   }
-  
-  // 初始定位与兜底刷新
-  updatePosition();
-  setInterval(updatePosition, 500);
 
-  // 使用 Shadow DOM 隔离样式，避免被页面 CSS 覆盖
-  var shadow = root.attachShadow({ mode: 'closed' });
+  // ── 2. 清除 html/body 上破坏 fixed 定位的属性 ──
+  function neutralizeTransforms() {
+    ['transform', 'webkitTransform', 'willChange', 'perspective'].forEach(function(prop) {
+      document.documentElement.style.setProperty(prop, 'none', 'important');
+      if (document.body) document.body.style.setProperty(prop, 'none', 'important');
+    });
+  }
+  neutralizeTransforms();
+
+  // 使用 MutationObserver 监控 html/body 的 style 变化，持续清除
+  var observer = new MutationObserver(neutralizeTransforms);
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+  if (document.body) {
+    observer.observe(document.body, { attributes: true, attributeFilter: ['style'] });
+  }
+
+  // ── 3. 创建全屏 fixed overlay ──
+  var overlay = document.createElement('div');
+  overlay.id = 'nextclass-fab-overlay';
+  overlay.style.cssText = [
+    'position:fixed',
+    'top:0', 'left:0', 'right:0', 'bottom:0',
+    'z-index:2147483647',
+    'pointer-events:none',
+    'transform:none',
+    'will-change:auto',
+    'contain:layout'
+  ].join('!important;') + '!important;';
+
+  // ── 4. Shadow DOM 隔离样式 ──
+  var shadow = overlay.attachShadow({ mode: 'closed' });
   var style = document.createElement('style');
   style.textContent = \`
+    :host { display:block; position:fixed; inset:0; pointer-events:none; z-index:2147483647; }
     .nc-fab {
-      position: absolute;
+      position: fixed;
       bottom: 24px;
       right: 24px;
       display: flex;
@@ -206,6 +211,7 @@ const FAB_INJECT_SCRIPT = `
   \`;
   shadow.appendChild(style);
 
+  // ── 5. 创建按钮 ──
   var btn = document.createElement('button');
   btn.className = 'nc-fab';
   btn.innerHTML = '<span class="nc-icon">✨</span>抓取课表';
@@ -216,7 +222,6 @@ const FAB_INJECT_SCRIPT = `
     btn.style.pointerEvents = 'none';
     btn.style.opacity = '0.7';
 
-    // 直接抓取 HTML 并通过原生桥发回（不经过剪贴板）
     try {
       var html = document.documentElement.outerHTML;
       if (!html || html.length < 100) {
@@ -224,7 +229,6 @@ const FAB_INJECT_SCRIPT = `
           action: 'captureError',
           error: '页面内容为空或过短，请确保页面已完全加载'
         });
-        // 恢复按钮状态
         btn.innerHTML = '<span class="nc-icon">✨</span>抓取课表';
         btn.style.pointerEvents = 'auto';
         btn.style.opacity = '1';
@@ -246,8 +250,8 @@ const FAB_INJECT_SCRIPT = `
   }, true);
   shadow.appendChild(btn);
 
-  // 挂到 documentElement 确保不受 body 的 transform/overflow 影响
-  document.documentElement.appendChild(root);
+  // ── 6. 挂载到 documentElement（不受 body overflow 影响） ──
+  document.documentElement.appendChild(overlay);
 })();
 `;
 
