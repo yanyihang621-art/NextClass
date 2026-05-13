@@ -2,6 +2,9 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useCourses } from '../contexts/CourseContext';
 import { useSettings } from '../contexts/SettingsContext';
+import { defaultPeriods } from '../contexts/SettingsContext';
+import type { TimetableConfig } from '../contexts/SettingsContext';
+import type { ParsedCourse } from '../lib/parseSchedule';
 import PickerModal from '../components/PickerModal';
 import WeekSelectorModal from '../components/WeekSelectorModal';
 
@@ -15,15 +18,25 @@ interface TimeSlot {
   periodEnd: string;
 }
 
+const IMPORT_COLORS = [
+  '#6d23f9', '#2196F3', '#4CAF50', '#FF9800', '#E91E63', '#00BCD4',
+  '#8BC34A', '#FFC107', '#F44336', '#3F51B5', '#009688', '#9C27B0',
+];
+
 export default function CourseEditor() {
   const navigate = useNavigate();
-  const { courses, addCourse, updateCourse, deleteCourse } = useCourses();
-  const { activeTimetable } = useSettings();
+  const { courses, addCourse, updateCourse, deleteCourse, deleteCoursesByTimetable } = useCourses();
+  const { activeTimetable, timetables, setTimetables } = useSettings();
   const locationState = useLocation().state as any;
   const initialData = locationState?.courseData || {};
   const isNew = locationState?.isNew ?? (!initialData.courseName);
 
-  if (!activeTimetable) {
+  // ── 批量导入模式 ──
+  const importedCourses: ParsedCourse[] | undefined = locationState?.importedCourses;
+  const importMode: 'overwrite' | 'create-new' | undefined = locationState?.importMode;
+  const isImportMode = !!(importedCourses && importedCourses.length > 0);
+
+  if (!activeTimetable && !isImportMode) {
     return (
       <div className="text-on-surface min-h-screen bg-white flex flex-col items-center justify-center p-6 text-center">
         <span className="material-symbols-outlined text-6xl text-slate-300 mb-4">error</span>
@@ -47,9 +60,26 @@ export default function CourseEditor() {
   const [originalSlotIds, setOriginalSlotIds] = useState<string[]>([]);
 
   useEffect(() => {
-    // Determine sibling courses
+    // ── 批量导入模式：用 importedCourses 填充 ──
+    if (isImportMode && importedCourses) {
+      setTimeSlots(importedCourses.map((c, i) => ({
+        id: `import_${Date.now()}_${i}`,
+        weeks: c.weeks || '1-16',
+        day: String(c.day),
+        periodStart: String(c.periodStart),
+        periodEnd: String(c.periodEnd),
+        teacher: c.teacher || '',
+        location: c.location || '',
+        _courseName: c.name,  // 批量导入时每个 slot 有独立课名
+      } as any)));
+      setCourseName(locationState?.autoTitle || '导入的课表');
+      return;
+    }
+
+    // ── 常规编辑模式 ──
     if (!isNew && courseName) {
-      const siblingCourses = courses.filter(c => c.name === initialData.courseName && (c.timetableId || '1') === activeTimetable.id);
+      const ttId = activeTimetable?.id;
+      const siblingCourses = courses.filter(c => c.name === initialData.courseName && (c.timetableId || '1') === ttId);
       if (siblingCourses.length > 0) {
         setTimeSlots(siblingCourses.map(c => ({
           id: c.id,
@@ -62,7 +92,6 @@ export default function CourseEditor() {
         })));
         setOriginalSlotIds(siblingCourses.map(c => c.id));
       } else {
-        // Fallback
         setTimeSlots([{
           id: initialData.id,
           weeks: initialData.weeks || '1-16',
@@ -74,7 +103,7 @@ export default function CourseEditor() {
         }]);
         setOriginalSlotIds([initialData.id]);
       }
-    } else {
+    } else if (!isImportMode) {
       setTimeSlots([{
         id: `temp_${Date.now()}`,
         weeks: initialData.weeks || '1-16',
@@ -116,7 +145,7 @@ export default function CourseEditor() {
   }));
 
   const handleSaveClick = () => {
-    if (!courseName.trim()) {
+    if (!isImportMode && !courseName.trim()) {
       setShowValidationAlert(true);
       return;
     }
@@ -124,6 +153,55 @@ export default function CourseEditor() {
   };
 
   const confirmSave = () => {
+    if (isImportMode) {
+      // ── 批量导入保存逻辑 ──
+      let targetTimetableId = activeTimetable?.id || '';
+
+      if (importMode === 'create-new') {
+        const now = new Date();
+        const dateStr = `${now.getMonth() + 1}/${now.getDate()}`;
+        const newId = `import_tt_${Date.now()}`;
+        const newTimetable: TimetableConfig = {
+          id: newId,
+          name: `导入课表 ${dateStr}`,
+          term: '',
+          active: true,
+          startDate: '',
+          totalWeeks: 20,
+          periods: defaultPeriods,
+        };
+        const updated = timetables.map(t => ({ ...t, active: false }));
+        updated.push(newTimetable);
+        setTimetables(updated);
+        targetTimetableId = newId;
+      } else if (importMode === 'overwrite' && activeTimetable) {
+        deleteCoursesByTimetable(activeTimetable.id);
+        targetTimetableId = activeTimetable.id;
+      }
+
+      timeSlots.forEach((slot, index) => {
+        const slotAny = slot as any;
+        const name = slotAny._courseName || courseName.trim() || '未命名课程';
+        addCourse({
+          id: `import_${Date.now()}_${Math.random().toString(36).slice(2, 8)}_${index}`,
+          timetableId: targetTimetableId,
+          name,
+          teacher: slot.teacher,
+          location: slot.location,
+          weeks: slot.weeks,
+          day: parseInt(slot.day, 10),
+          periodStart: parseInt(slot.periodStart, 10),
+          periodEnd: parseInt(slot.periodEnd, 10),
+          color: IMPORT_COLORS[index % IMPORT_COLORS.length],
+          bg: `${IMPORT_COLORS[index % IMPORT_COLORS.length]}20`,
+        });
+      });
+
+      navigate('/timetable');
+      return;
+    }
+
+    // ── 常规单课程保存 ──
     const finalSlotIds = timeSlots.map(s => s.id);
     const slotsToDelete = originalSlotIds.filter(id => !finalSlotIds.includes(id));
     
@@ -132,7 +210,7 @@ export default function CourseEditor() {
     timeSlots.forEach(slot => {
       const courseData = {
         id: slot.id.startsWith('temp_') ? Date.now().toString() + Math.random().toString(36).substring(2, 6) : slot.id,
-        timetableId: activeTimetable.id,
+        timetableId: activeTimetable!.id,
         name: courseName.trim(),
         teacher: slot.teacher,
         location: slot.location,
@@ -318,30 +396,48 @@ export default function CourseEditor() {
         <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-slate-100 transition-colors">
           <span className="material-symbols-outlined text-slate-600">close</span>
         </button>
-        <h1 className="font-bold text-lg">{isNew ? '新建课程' : '编辑课程'}</h1>
+        <h1 className="font-bold text-lg">{isImportMode ? '预览导入' : isNew ? '新建课程' : '编辑课程'}</h1>
         <button onClick={handleSaveClick} className="p-2 -mr-2 rounded-full hover:bg-primary/10 text-primary transition-colors">
           <span className="material-symbols-outlined">check</span>
         </button>
       </header>
 
       <main className="pt-20 px-4 max-w-2xl mx-auto space-y-6">
-        <div className="bg-white rounded-dynamic p-4 shadow-sm border border-slate-100 relative">
-          <input
-            type="text"
-            placeholder="课程名称"
-            value={courseName}
-            onChange={(e) => setCourseName(e.target.value)}
-            className="w-full text-xl font-bold bg-transparent border-none outline-none placeholder:text-slate-300 pr-10"
-          />
-          <div className="absolute right-4 top-1/2 -translate-y-1/2">
-            <span className="material-symbols-outlined text-primary bg-primary/10 p-1.5 rounded-lg text-sm tooltip">sell</span>
+        {/* 批量导入模式提示 */}
+        {isImportMode && (
+          <div className="bg-primary/5 border border-primary/15 rounded-2xl p-4 flex items-start gap-3">
+            <span className="material-symbols-outlined text-primary text-xl mt-0.5">info</span>
+            <div>
+              <p className="text-sm font-bold text-slate-700">共 {timeSlots.length} 个课程时段</p>
+              <p className="text-xs text-slate-500 mt-1">
+                {importMode === 'overwrite' ? '将覆盖当前课表中的所有课程' : '将创建新课表并导入'}
+                 · 你可以在下方编辑或删除课程后再保存
+              </p>
+            </div>
           </div>
-        </div>
+        )}
+
+        {!isImportMode && (
+          <div className="bg-white rounded-dynamic p-4 shadow-sm border border-slate-100 relative">
+            <input
+              type="text"
+              placeholder="课程名称"
+              value={courseName}
+              onChange={(e) => setCourseName(e.target.value)}
+              className="w-full text-xl font-bold bg-transparent border-none outline-none placeholder:text-slate-300 pr-10"
+            />
+            <div className="absolute right-4 top-1/2 -translate-y-1/2">
+              <span className="material-symbols-outlined text-primary bg-primary/10 p-1.5 rounded-lg text-sm tooltip">sell</span>
+            </div>
+          </div>
+        )}
 
         {timeSlots.map((slot, index) => (
           <div key={slot.id} className="bg-white rounded-dynamic shadow-sm border border-slate-100 overflow-hidden relative">
             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-50 bg-slate-50/50">
-               <span className="text-xs font-bold text-slate-500 tracking-wider">时间段 {index + 1}</span>
+               <span className="text-xs font-bold text-slate-500 tracking-wider">
+                 {isImportMode ? ((slot as any)._courseName || `课程 ${index + 1}`) : `时间段 ${index + 1}`}
+               </span>
                {timeSlots.length > 1 && (
                  <button onClick={() => handleRemoveSlot(slot.id)} className="p-1 -mr-2 rounded-full text-slate-400 hover:bg-rose-50 hover:text-rose-500 transition-colors">
                     <span className="material-symbols-outlined text-lg block">close</span>

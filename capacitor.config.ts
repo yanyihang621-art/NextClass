@@ -6,7 +6,7 @@ const config: CapacitorConfig = {
   webDir: 'dist',
   server: {
     // TODO: 替换为你真实的 Vercel 部署域名
-    url: 'https://nextclass.top',
+    url: `nextclass.top`,
     cleartext: true,
   },
 };

@@ -39,6 +39,16 @@ export default function ImportContainer({ school, onBack, onStartParsing, onCour
     }
   }, [school.id, school.login_url, setCurrentUrl]);
 
+  // ── 抓取成功后自动触发 onCoursesImported ──
+  useEffect(() => {
+    if (status === 'success' && courses.length > 0 && onCoursesImported) {
+      const timer = setTimeout(() => {
+        onCoursesImported(courses);
+      }, 600);
+      return () => clearTimeout(timer);
+    }
+  }, [status, courses, onCoursesImported]);
+
   const handleParse = useCallback(() => {
     setError('');
     if (!htmlSource.trim()) {
@@ -334,17 +344,10 @@ export default function ImportContainer({ school, onBack, onStartParsing, onCour
                 正在抓取…
               </button>
             ) : status === 'success' ? (
-              <button
-                onClick={() => {
-                  if (onCoursesImported && courses.length > 0) {
-                    onCoursesImported(courses);
-                  }
-                }}
-                className="w-full py-3.5 bg-green-600 text-white rounded-xl font-bold text-base hover:brightness-110 active:scale-[0.98] transition-all shadow-lg shadow-green-600/20 flex items-center justify-center gap-2"
-              >
-                <span className="material-symbols-outlined text-xl">check</span>
-                确认导入 {courses.length} 门课程
-              </button>
+              <div className="w-full py-3.5 bg-green-100 text-green-700 rounded-xl font-bold text-base flex items-center justify-center gap-2">
+                <span className="material-symbols-outlined text-xl">check_circle</span>
+                解析完成，正在跳转…
+              </div>
             ) : null
           ) : (
             // ── Web 环境按钮 ──

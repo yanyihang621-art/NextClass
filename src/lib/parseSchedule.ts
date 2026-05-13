@@ -605,8 +605,64 @@ function parseGeneric(htmlString: string): ParsedCourse[] {
   return parseScheduleData(htmlString, 'generic');
 }
 
+// ═════════════════════════════════════════════════════════════════════════════
+// 自动识别教务系统类型
+// ═════════════════════════════════════════════════════════════════════════════
+
+/**
+ * 通过分析 HTML 内容中的特征字符串，自动判断教务系统类型。
+ *
+ * 识别规则：
+ *   - kbgrid_table / timetable_con / timetable1 → zhengfang (正方)
+ *   - eams / tableList_tab / course-table → qiangzhi (强智)
+ *   - kingosoft / jwglxt / jw_main → kingosoft (金智)
+ *   - 未识别 → generic (通用兜底)
+ */
+export function detectSystemType(html: string): string {
+  const lower = html.toLowerCase();
+
+  // ── 正方教务系统特征 ──
+  if (
+    /kbgrid[_\-]?table/i.test(html) ||
+    /class\s*=\s*["'][^"']*timetable_con/i.test(html) ||
+    /class\s*=\s*["'][^"']*timetable1/i.test(html) ||
+    /id\s*=\s*["']\d+-\d+["']/i.test(html)  // td id="1-1" 格式
+  ) {
+    console.log('[detectSystemType] Detected: zhengfang');
+    return 'zhengfang';
+  }
+
+  // ── 强智教务系统特征 ──
+  if (
+    lower.includes('eams') ||
+    lower.includes('tablelist_tab') ||
+    lower.includes('course-table') ||
+    lower.includes('/eams/') ||
+    lower.includes('kingo')
+  ) {
+    console.log('[detectSystemType] Detected: qiangzhi');
+    return 'qiangzhi';
+  }
+
+  // ── 金智教务系统特征 ──
+  if (
+    lower.includes('kingosoft') ||
+    lower.includes('jwglxt') ||
+    lower.includes('jw_main')
+  ) {
+    console.log('[detectSystemType] Detected: kingosoft');
+    return 'kingosoft';
+  }
+
+  console.log('[detectSystemType] No match, falling back to generic');
+  return 'generic';
+}
+
 /**
  * 智能解析入口：根据 systemType 路由到不同的解析器
+ *
+ * 当 systemType 为 'auto' 时，会先通过 detectSystemType 自动识别，
+ * 然后路由到对应的解析器。
  */
 export function smartParseSchedule(
   input: string,
@@ -622,12 +678,17 @@ export function smartParseSchedule(
     return [];
   }
 
+  // ── 自动识别模式 ──
+  const effectiveType = systemType === 'auto'
+    ? detectSystemType(trimmed)
+    : systemType;
+
   // ── 根据教务系统类型路由到对应解析器 ──
   let result: ParsedCourse[];
 
-  switch (systemType) {
+  switch (effectiveType) {
     case 'zhengfang':
-      result = parseScheduleData(trimmed, systemType);
+      result = parseScheduleData(trimmed, effectiveType);
       break;
 
     case 'qiangzhi':

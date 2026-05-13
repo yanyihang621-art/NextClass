@@ -3,28 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import BottomNav from '../components/BottomNav';
 import SchoolSelector from '../components/SchoolSelector';
 import ImportContainer from '../components/ImportContainer';
-import { useCourses } from '../contexts/CourseContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { smartParseSchedule } from '../lib/parseSchedule';
 import type { ParsedCourse } from '../lib/parseSchedule';
 import type { School } from '../data/schools';
-import type { Course } from '../contexts/CourseContext';
-import type { TimetableConfig } from '../contexts/SettingsContext';
-import { defaultPeriods } from '../contexts/SettingsContext';
-
-// ─── 预设教务系统链接 ──────────────────────────────────────────────────────
-
-interface PresetSystem {
-  label: string;
-  systemType: string;
-  url: string;
-}
-
-const PRESET_SYSTEMS: PresetSystem[] = [
-  { label: '正方教务系统',     systemType: 'zhengfang', url: '#' },
-  { label: '强智教务系统',     systemType: 'qiangzhi',  url: '#' },
-  { label: '北京化工大学教务处', systemType: 'zhengfang', url: '#' },
-];
 
 // ─── 课程配色方案（柔和色） ──────────────────────────────────────────────────
 
@@ -46,16 +28,11 @@ type ImportAction = 'overwrite' | 'create-new' | 'cancel';
 
 export default function Import() {
   const navigate = useNavigate();
-  const { addCourse, deleteCoursesByTimetable } = useCourses();
-  const { activeTimetable, timetables, setTimetables } = useSettings();
+  const { activeTimetable } = useSettings();
 
   const [view, setView] = useState<ImportView>('home');
   const [selectedSchool, setSelectedSchool] = useState<School | null>(null);
   const [parseResult, setParseResult] = useState<{ count: number; error?: string } | null>(null);
-
-  // ── 快速导入 ──
-  const [selectedPreset, setSelectedPreset] = useState(0);
-  const [customUrl, setCustomUrl] = useState('');
 
   // ── 导入确认对话框 ──
   const [pendingCourses, setPendingCourses] = useState<ParsedCourse[] | null>(null);
@@ -67,82 +44,20 @@ export default function Import() {
     setView('import-container');
   };
 
-  // ── 快速导入 → 前往登录 ──
-  const handleQuickImport = () => {
-    const preset = PRESET_SYSTEMS[selectedPreset];
-    const url = customUrl.trim() || preset.url;
-    // 构建一个合成的 School 对象，复用 ImportContainer 流程
-    const syntheticSchool: School = {
-      id: `quick_${preset.systemType}`,
-      name: preset.label,
-      pinyin_initial: '',
-      login_url: url,
-      system_type: preset.systemType,
-    };
-    setSelectedSchool(syntheticSchool);
-    setView('import-container');
-  };
-
   // ═══════════════════════════════════════════════════════════════════════
-  // 核心：将 ParsedCourse[] 组装为 Course[] 并写入 Context
+  // 核心：将 ParsedCourse[] 通过 router state 传递给 CourseEditor
   // ═══════════════════════════════════════════════════════════════════════
 
-  const assembleCourses = useCallback((parsed: ParsedCourse[], timetableId?: string): Course[] => {
-    return parsed.map((pc, index) => ({
-      id: `import_${Date.now()}_${Math.random().toString(36).slice(2, 8)}_${index}`,
-      timetableId,
-      name: pc.name,
-      teacher: pc.teacher,
-      location: pc.location,
-      weeks: pc.weeks,
-      day: pc.day,
-      periodStart: pc.periodStart,
-      periodEnd: pc.periodEnd,
-      color: IMPORT_COLORS[index % IMPORT_COLORS.length],
-      bg: `${IMPORT_COLORS[index % IMPORT_COLORS.length]}20`,
-    }));
-  }, []);
-
-  // ── 覆盖当前课表 ──
-  const doOverwrite = useCallback((parsed: ParsedCourse[]) => {
-    if (!activeTimetable) return;
-    // 删除当前课表的所有课程
-    deleteCoursesByTimetable(activeTimetable.id);
-    // 添加新解析的课程
-    const courses = assembleCourses(parsed, activeTimetable.id);
-    for (const c of courses) addCourse(c);
-    setParseResult({ count: parsed.length });
-    setTimeout(() => navigate('/timetable'), 1500);
-  }, [activeTimetable, deleteCoursesByTimetable, assembleCourses, addCourse, navigate]);
-
-  // ── 新建课表 ──
-  const doCreateNew = useCallback((parsed: ParsedCourse[]) => {
-    const now = new Date();
-    const dateStr = `${now.getMonth() + 1}/${now.getDate()}`;
-    const newId = `import_tt_${Date.now()}`;
-
-    const newTimetable: TimetableConfig = {
-      id: newId,
-      name: `导入课表 ${dateStr}`,
-      term: '',
-      active: true,
-      startDate: '',
-      totalWeeks: 20,
-      periods: defaultPeriods,
-    };
-
-    // 将所有现有课表设为非 active，追加新课表
-    const updated = timetables.map(t => ({ ...t, active: false }));
-    updated.push(newTimetable);
-    setTimetables(updated);
-
-    // 添加课程到新课表
-    const courses = assembleCourses(parsed, newId);
-    for (const c of courses) addCourse(c);
-
-    setParseResult({ count: parsed.length });
-    setTimeout(() => navigate('/timetable'), 1500);
-  }, [timetables, setTimetables, assembleCourses, addCourse, navigate]);
+  /** 跳转到编辑器页面，让用户预览/编辑后再保存 */
+  const navigateToEditor = useCallback((parsed: ParsedCourse[], mode: 'overwrite' | 'create-new') => {
+    navigate('/editor', {
+      state: {
+        importedCourses: parsed,
+        importMode: mode,
+        autoTitle: '导入的课表',
+      },
+    });
+  }, [navigate]);
 
   // ── 处理确认对话框的选择 ──
   const handleConfirmAction = useCallback((action: ImportAction) => {
@@ -151,13 +66,10 @@ export default function Import() {
       setPendingCourses(null);
       return;
     }
-    if (action === 'overwrite') {
-      doOverwrite(pendingCourses);
-    } else if (action === 'create-new') {
-      doCreateNew(pendingCourses);
-    }
+    // 将数据带到编辑器页面
+    navigateToEditor(pendingCourses, action);
     setPendingCourses(null);
-  }, [pendingCourses, doOverwrite, doCreateNew]);
+  }, [pendingCourses, navigateToEditor]);
 
   // ═══════════════════════════════════════════════════════════════════════
   // 解析回调
@@ -204,62 +116,7 @@ export default function Import() {
       <main className="app-content pt-6 px-4 pb-4 max-w-2xl mx-auto">
 
         {/* ═══════════════════════════════════════════
-            Section 1: 快速导入（预设链接 + 自定义 URL）
-            ═══════════════════════════════════════════ */}
-        <section className="mb-10">
-          <div className="flex items-center gap-3 mb-6">
-            <span className="material-symbols-outlined text-primary text-3xl">bolt</span>
-            <h3 className="text-xl font-bold font-headline">快速导入</h3>
-          </div>
-
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-outline-variant/15 space-y-4">
-            {/* 预设系统类型下拉 */}
-            <div>
-              <label className="text-xs font-bold text-slate-500 mb-1.5 block">教务系统类型</label>
-              <div className="relative">
-                <select
-                  value={selectedPreset}
-                  onChange={e => setSelectedPreset(Number(e.target.value))}
-                  className="w-full appearance-none bg-slate-50 border border-slate-200 rounded-xl py-2.5 pl-4 pr-10 text-sm text-slate-800 font-medium outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all cursor-pointer"
-                >
-                  {PRESET_SYSTEMS.map((sys, i) => (
-                    <option key={i} value={i}>{sys.label}</option>
-                  ))}
-                </select>
-                <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 text-lg pointer-events-none">
-                  expand_more
-                </span>
-              </div>
-            </div>
-
-            {/* 自定义 URL 输入 */}
-            <div>
-              <label className="text-xs font-bold text-slate-500 mb-1.5 block">教务系统网址</label>
-              <input
-                type="url"
-                value={customUrl}
-                onChange={e => setCustomUrl(e.target.value)}
-                placeholder="https://jwgl.example.edu.cn （可留空使用预设）"
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-4 text-sm text-slate-800 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all placeholder:text-slate-300"
-                autoCapitalize="none"
-                autoCorrect="off"
-                spellCheck={false}
-              />
-            </div>
-
-            {/* 前往登录按钮 */}
-            <button
-              onClick={handleQuickImport}
-              className="w-full py-3 bg-primary text-white rounded-xl font-bold text-sm hover:brightness-110 active:scale-[0.98] transition-all shadow-lg shadow-primary/15 flex items-center justify-center gap-2"
-            >
-              <span className="material-symbols-outlined text-lg">open_in_browser</span>
-              前往登录
-            </button>
-          </div>
-        </section>
-
-        {/* ═══════════════════════════════════════════
-            Section 2: 教务系统导入（选择学校）
+            Section 1: 教务系统导入（选择学校）
             ═══════════════════════════════════════════ */}
         <section className="mb-12">
           <div className="flex items-center gap-3 mb-6">
@@ -284,7 +141,7 @@ export default function Import() {
         </section>
 
         {/* ═══════════════════════════════════════════
-            Section 3: 文件导入
+            Section 2: 文件导入
             ═══════════════════════════════════════════ */}
         <section>
           <div className="flex items-center gap-3 mb-6">

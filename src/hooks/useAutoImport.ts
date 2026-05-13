@@ -237,8 +237,8 @@ export function useAutoImport(): UseAutoImportReturn {
         throw new Error('剪贴板中未找到有效的 HTML 数据。请确保已在课表页面后重试。');
       }
 
-      // Step 4: 解析
-      const parsed = smartParseSchedule(html, systemTypeRef.current);
+      // Step 4: 解析（使用自动识别模式）
+      const parsed = smartParseSchedule(html, 'auto');
 
       if (parsed.length === 0) {
         throw new Error(
