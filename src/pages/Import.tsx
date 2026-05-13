@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'motion/react';
 import BottomNav from '../components/BottomNav';
 import SchoolSelector from '../components/SchoolSelector';
 import ImportContainer from '../components/ImportContainer';
@@ -33,6 +34,7 @@ export default function Import() {
   const [view, setView] = useState<ImportView>('home');
   const [selectedSchool, setSelectedSchool] = useState<School | null>(null);
   const [parseResult, setParseResult] = useState<{ count: number; error?: string } | null>(null);
+  const [isParsing, setIsParsing] = useState(false);
 
   // ── 导入确认对话框 ──
   const [pendingCourses, setPendingCourses] = useState<ParsedCourse[] | null>(null);
@@ -89,25 +91,30 @@ export default function Import() {
   const handleStartParsing = (html: string, systemType: string) => {
     console.log('[Import] Start parsing', { systemType, htmlLength: html.length });
     setParseResult(null);
+    setIsParsing(true);
 
-    try {
-      const parsed = smartParseSchedule(html, systemType);
+    setTimeout(() => {
+      try {
+        const parsed = smartParseSchedule(html, systemType);
 
-      if (parsed.length === 0) {
-        setParseResult({
-          count: 0,
-          error: '未解析到课程数据。请确保已在教务系统中加载课表后，复制完整的页面 HTML。\n\n提示：正方系统 V9.0 的课表通过 AJAX 动态加载，直接 "查看源代码" 中不含课表数据。请改为在开发者工具(F12) 中选择课表表格元素并复制其 outerHTML。',
-        });
-        return;
+        if (parsed.length === 0) {
+          setParseResult({
+            count: 0,
+            error: '未解析到课程数据。请确保已在教务系统中加载课表后，复制完整的页面 HTML。\n\n提示：正方系统 V9.0 的课表通过 AJAX 动态加载，直接 "查看源代码" 中不含课表数据。请改为在开发者工具(F12) 中选择课表表格元素并复制其 outerHTML。',
+          });
+          return;
+        }
+
+        // 显示确认对话框
+        setPendingCourses(parsed);
+        setShowConfirmDialog(true);
+      } catch (err) {
+        console.error('[Import] Parse error:', err);
+        setParseResult({ count: 0, error: `解析出错：${err instanceof Error ? err.message : String(err)}` });
+      } finally {
+        setIsParsing(false);
       }
-
-      // 显示确认对话框
-      setPendingCourses(parsed);
-      setShowConfirmDialog(true);
-    } catch (err) {
-      console.error('[Import] Parse error:', err);
-      setParseResult({ count: 0, error: `解析出错：${err instanceof Error ? err.message : String(err)}` });
-    }
+    }, 500);
   };
 
   /** 自动导入回调（InAppBrowser 返回已解析课程数组） */
@@ -195,31 +202,58 @@ export default function Import() {
       {/* ═══════════════════════════════════════════
           School Selector overlay
           ═══════════════════════════════════════════ */}
-      {view === 'school-selector' && (
-        <SchoolSelector
-          onSelect={handleSelectSchool}
-          onBack={() => setView('home')}
-        />
-      )}
+      <AnimatePresence>
+        {view === 'school-selector' && (
+          <motion.div
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="fixed inset-0 z-[100] bg-surface"
+          >
+            <SchoolSelector
+              onSelect={handleSelectSchool}
+              onBack={() => setView('home')}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ═══════════════════════════════════════════
           Import Container overlay
           ═══════════════════════════════════════════ */}
-      {view === 'import-container' && selectedSchool && (
-        <ImportContainer
-          school={selectedSchool}
-          onBack={() => setView('school-selector')}
-          onStartParsing={handleStartParsing}
-          onCoursesImported={handleCoursesImported}
-        />
-      )}
+      <AnimatePresence>
+        {view === 'import-container' && selectedSchool && (
+          <motion.div
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="fixed inset-0 z-[100] bg-surface"
+          >
+            <ImportContainer
+              school={selectedSchool}
+              onBack={() => setView('school-selector')}
+              onStartParsing={handleStartParsing}
+              onCoursesImported={handleCoursesImported}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ═══════════════════════════════════════════
           导入确认对话框（覆盖 / 新建 / 取消）
           ═══════════════════════════════════════════ */}
-      {showConfirmDialog && pendingCourses && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="mx-6 p-6 rounded-2xl shadow-2xl max-w-sm w-full bg-white border border-slate-100">
+      <AnimatePresence>
+        {showConfirmDialog && pendingCourses && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/30 backdrop-blur-sm">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 10 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 10 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="mx-6 p-6 rounded-2xl shadow-2xl max-w-sm w-full bg-white border border-slate-100"
+            >
             <div className="flex flex-col items-center text-center gap-4">
               {/* Icon */}
               <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
@@ -288,43 +322,69 @@ export default function Import() {
                 </button>
               </div>
             </div>
-          </div>
+          </motion.div>
         </div>
       )}
+      </AnimatePresence>
+
+      {/* ═══════════════════════════════════════════
+          Loading Overlay
+          ═══════════════════════════════════════════ */}
+      <AnimatePresence>
+        {isParsing && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[110] bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center"
+          >
+            <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4" />
+            <p className="text-sm font-medium text-slate-600 animate-pulse">正在解析课表数据...</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ═══════════════════════════════════════════
           Parse Result Toast
           ═══════════════════════════════════════════ */}
-      {parseResult && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className={`mx-6 p-6 rounded-2xl shadow-2xl max-w-sm w-full ${parseResult.error ? 'bg-white border border-red-100' : 'bg-white border border-green-100'}`}>
-            <div className="flex flex-col items-center text-center gap-3">
-              <div className={`w-14 h-14 rounded-full flex items-center justify-center ${parseResult.error ? 'bg-red-50' : 'bg-green-50'}`}>
-                <span className={`material-symbols-outlined text-3xl ${parseResult.error ? 'text-red-500' : 'text-green-500'}`}>
-                  {parseResult.error ? 'error' : 'check_circle'}
-                </span>
+      <AnimatePresence>
+        {parseResult && (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/30 backdrop-blur-sm">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 10 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 10 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className={`mx-6 p-6 rounded-2xl shadow-2xl max-w-sm w-full ${parseResult.error ? 'bg-white border border-red-100' : 'bg-white border border-green-100'}`}
+            >
+              <div className="flex flex-col items-center text-center gap-3">
+                <div className={`w-14 h-14 rounded-full flex items-center justify-center ${parseResult.error ? 'bg-red-50' : 'bg-green-50'}`}>
+                  <span className={`material-symbols-outlined text-3xl ${parseResult.error ? 'text-red-500' : 'text-green-500'}`}>
+                    {parseResult.error ? 'error' : 'check_circle'}
+                  </span>
+                </div>
+                <h4 className="text-lg font-bold text-slate-800">
+                  {parseResult.error ? '解析失败' : `成功导入 ${parseResult.count} 门课程`}
+                </h4>
+                {parseResult.error && (
+                  <p className="text-sm text-slate-500 leading-relaxed whitespace-pre-line">{parseResult.error}</p>
+                )}
+                {!parseResult.error && (
+                  <p className="text-sm text-slate-400">即将跳转到课表页面...</p>
+                )}
+                {parseResult.error && (
+                  <button
+                    onClick={() => setParseResult(null)}
+                    className="mt-2 px-6 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-sm font-bold text-slate-700 transition-colors"
+                  >
+                    知道了
+                  </button>
+                )}
               </div>
-              <h4 className="text-lg font-bold text-slate-800">
-                {parseResult.error ? '解析失败' : `成功导入 ${parseResult.count} 门课程`}
-              </h4>
-              {parseResult.error && (
-                <p className="text-sm text-slate-500 leading-relaxed whitespace-pre-line">{parseResult.error}</p>
-              )}
-              {!parseResult.error && (
-                <p className="text-sm text-slate-400">即将跳转到课表页面...</p>
-              )}
-              {parseResult.error && (
-                <button
-                  onClick={() => setParseResult(null)}
-                  className="mt-2 px-6 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-sm font-bold text-slate-700 transition-colors"
-                >
-                  知道了
-                </button>
-              )}
-            </div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
     </div>
   );
 }

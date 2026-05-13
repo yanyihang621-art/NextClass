@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'motion/react';
 import BottomNav from '../components/BottomNav';
 import { useSettings, defaultPeriods } from '../contexts/SettingsContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -236,8 +237,15 @@ export default function Settings() {
       </main>
 
       {/* Timetable Management Modal */}
-      {isTimetableManageOpen && (
-        <div className="fixed inset-0 z-[90] flex flex-col bg-[#F7F7F9] animate-in slide-in-from-right duration-300">
+      <AnimatePresence>
+        {isTimetableManageOpen && (
+          <motion.div 
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="fixed inset-0 z-[90] flex flex-col bg-[#F7F7F9]"
+          >
           <div className="flex items-center justify-between p-4 bg-[#F7F7F9] sticky top-0 z-10" style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))' }}>
             <button onClick={() => setIsTimetableManageOpen(false)} className="p-2 -ml-2 rounded-full hover:bg-slate-200 transition-colors">
               <span className="material-symbols-outlined text-slate-800">arrow_back_ios_new</span>
@@ -299,14 +307,22 @@ export default function Settings() {
                 <span className="font-bold">新建课表</span>
               </button>
             </div>
-          </div>
-        </div>
-      )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Edit Timetable Modal */}
-      {editingTableId && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-dynamic w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl animate-in fade-in zoom-in-95 duration-200 flex flex-col">
+      <AnimatePresence>
+        {editingTableId && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0, y: 10 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 10 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="bg-white rounded-dynamic w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col"
+            >
             <div className="flex justify-between items-center p-4 border-b border-slate-100 sticky top-0 bg-white z-10">
               <button onClick={closeEditModal} className="p-2 -ml-2 rounded-full hover:bg-slate-100 transition-colors">
                 <span className="material-symbols-outlined text-slate-600">close</span>
@@ -411,13 +427,21 @@ export default function Settings() {
                 </div>
               )}
             </div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
 
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 px-4">
-          <div className="bg-white rounded-dynamic p-6 w-full max-w-sm shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+      <AnimatePresence>
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 px-4">
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0, y: 10 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 10 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="bg-white rounded-dynamic p-6 w-full max-w-sm shadow-2xl"
+            >
             <h3 className="text-lg font-bold text-primary mb-2">删除课表</h3>
             <p className="text-slate-600 mb-6">确定要删除这个课表吗？此操作不可恢复。</p>
             <div className="flex justify-end gap-3">
@@ -434,9 +458,10 @@ export default function Settings() {
                 删除
               </button>
             </div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
 
       {/* Pickers for Settings */}
       <DatePickerModal
@@ -471,8 +496,15 @@ export default function Settings() {
       />
 
       {/* Personalization Modal */}
-      {isPersonalizationOpen && (
-        <div className="fixed inset-0 z-[90] flex flex-col bg-[#F7F7F9] animate-in slide-in-from-right duration-300">
+      <AnimatePresence>
+        {isPersonalizationOpen && (
+          <motion.div 
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="fixed inset-0 z-[90] flex flex-col bg-[#F7F7F9]"
+          >
           <div className="flex items-center justify-between p-4 bg-[#F7F7F9] sticky top-0 z-10" style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))' }}>
             <button onClick={handleCancelPersonalization} className="p-2 -ml-2 rounded-full hover:bg-slate-200 transition-colors">
               <span className="material-symbols-outlined text-slate-800">arrow_back_ios_new</span>
@@ -547,11 +579,12 @@ export default function Settings() {
                     ></button>
                   ))}
                 </div>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <BottomNav />
     </div>

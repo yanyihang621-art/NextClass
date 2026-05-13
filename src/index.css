@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@plugin "tailwindcss-animate";
 
 @theme {
   --color-primary: var(--theme-primary, #6d23f9);

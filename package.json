@@ -27,7 +27,8 @@
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.13.2",
     "react-swipeable": "^7.0.2",
-    "tailwind-merge": "^3.5.0"
+    "tailwind-merge": "^3.5.0",
+    "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

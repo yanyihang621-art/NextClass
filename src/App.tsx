@@ -20,6 +20,7 @@ import NextClass from './pages/NextClass';
 import ResetPassword from './pages/ResetPassword';
 import ScrollToTop from './components/ScrollToTop';
 import PageTransition from './components/PageTransition';
+import TabTransition from './components/TabTransition';
 import { Capacitor } from '@capacitor/core';
 import { StatusBar, Style } from '@capacitor/status-bar';
 
@@ -32,17 +33,17 @@ function AnimatedRoutes() {
 
   return (
     <AnimatePresence mode="wait">
-      <Routes location={location} key={isTabPage ? 'tabs' : location.pathname}>
+      <Routes location={location} key={location.pathname}>
         {/* Auth pages */}
         <Route path="/login" element={<Login />} />
         <Route path="/reset-password" element={<ResetPassword />} />
 
-        {/* Tab pages — rendered WITHOUT page transition */}
+        {/* Tab pages — fade-in transition */}
         <Route path="/" element={<ProtectedRoute><Navigate to="/timetable" replace /></ProtectedRoute>} />
-        <Route path="/agenda" element={<ProtectedRoute><Agenda /></ProtectedRoute>} />
-        <Route path="/timetable" element={<ProtectedRoute><Timetable /></ProtectedRoute>} />
-        <Route path="/import" element={<ProtectedRoute><Import /></ProtectedRoute>} />
-        <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+        <Route path="/agenda" element={<ProtectedRoute><TabTransition><Agenda /></TabTransition></ProtectedRoute>} />
+        <Route path="/timetable" element={<ProtectedRoute><TabTransition><Timetable /></TabTransition></ProtectedRoute>} />
+        <Route path="/import" element={<ProtectedRoute><TabTransition><Import /></TabTransition></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute><TabTransition><Settings /></TabTransition></ProtectedRoute>} />
 
         {/* Non-tab pages — slide-in animation */}
         <Route path="/editor" element={
