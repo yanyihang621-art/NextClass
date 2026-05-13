@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
+import { useSwipeable } from 'react-swipeable';
 import BottomNav from '../components/BottomNav';
 import { useSettings } from '../contexts/SettingsContext';
 import { useCourses } from '../contexts/CourseContext';
@@ -66,6 +67,15 @@ export default function Timetable() {
       setWeek((prev) => Math.min(activeTimetable.totalWeeks, prev + 1));
     }
   };
+
+  // ── Swipe handlers for week switching ──
+  const swipeHandlers = useSwipeable({
+    onSwipedLeft: () => handleNextWeek(),
+    onSwipedRight: () => handlePrevWeek(),
+    trackMouse: false,
+    preventScrollOnSwipe: false,
+    delta: 50,
+  });
 
   const slideVariants = {
     enter: (direction: number) => ({
@@ -160,7 +170,8 @@ export default function Timetable() {
         </div>
       </div>
 
-      <main className="app-content px-2 pb-4">
+      <main {...swipeHandlers} className="app-content px-2 pb-4">
+
 
         <AnimatePresence mode="wait" custom={direction}>
           <motion.div
