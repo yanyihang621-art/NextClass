@@ -212,6 +212,11 @@ export function useAutoImport(): UseAutoImportReturn {
         toolbarColor: '#6d23f9',
         showArrow: true,
         isPresentAfterPageLoad: true,
+        // 允许 WebView 内部导航（点击链接不跳外部浏览器）
+        activeNativeNavigationForWebview: true,
+        preventDeeplink: true,
+        // 导航工具栏（含前进/后退按钮）
+        toolbarType: 'navigation' as any,
       });
 
       // 监听 URL 变化 → 同步到 React 状态
@@ -227,25 +232,65 @@ export function useAutoImport(): UseAutoImportReturn {
         setStatus(prev => (prev === 'browsing' ? 'idle' : prev));
       });
 
-      // 注入悬浮按钮
+      // 注入悬浮抓取按钮（使用独立容器 + Shadow DOM 防止被页面样式影响）
       await InAppBrowser.addListener('browserPageLoaded', () => {
         InAppBrowser.executeScript({
           code: `
             (function() {
-              if (document.getElementById('nextclass-capture-btn')) return;
+              // 移除旧按钮（如果存在）
+              var old = document.getElementById('nextclass-fab-root');
+              if (old) old.remove();
+
+              // 创建一个顶层容器，挂在 documentElement 上而非 body
+              var root = document.createElement('div');
+              root.id = 'nextclass-fab-root';
+              root.style.cssText = 'position:fixed!important;bottom:24px!important;right:24px!important;z-index:2147483647!important;pointer-events:auto!important;transform:none!important;will-change:auto!important;';
+
+              // 使用 Shadow DOM 隔离样式，避免被页面 CSS 覆盖
+              var shadow = root.attachShadow({ mode: 'closed' });
+              var style = document.createElement('style');
+              style.textContent = '\\
+                .nc-fab {\\
+                  display: flex;\\
+                  align-items: center;\\
+                  gap: 6px;\\
+                  background: linear-gradient(135deg, #22c55e, #059669);\\
+                  color: white;\\
+                  font-weight: 700;\\
+                  font-size: 14px;\\
+                  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;\\
+                  border: none;\\
+                  border-radius: 50px;\\
+                  padding: 14px 22px;\\
+                  box-shadow: 0 8px 24px rgba(5, 150, 105, 0.4);\\
+                  cursor: pointer;\\
+                  transition: transform 0.15s ease, box-shadow 0.15s ease;\\
+                  -webkit-tap-highlight-color: transparent;\\
+                  user-select: none;\\
+                  line-height: 1;\\
+                }\\
+                .nc-fab:active { transform: scale(0.93); box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3); }\\
+                .nc-icon { font-size: 20px; line-height: 1; }\\
+              ';
+              shadow.appendChild(style);
+
               var btn = document.createElement('button');
-              btn.id = 'nextclass-capture-btn';
-              btn.innerHTML = '<span style="font-size:20px;margin-right:4px;">✨</span>抓取课表';
-              btn.style.cssText = 'position:fixed;bottom:max(24px, env(safe-area-inset-bottom));right:24px;z-index:9999999;background:linear-gradient(to right, #22c55e, #059669);color:white;font-weight:bold;font-size:14px;border:none;border-radius:50px;padding:14px 20px;box-shadow:0 10px 15px -3px rgba(22, 163, 74, 0.3), 0 4px 6px -4px rgba(22, 163, 74, 0.3);display:flex;align-items:center;cursor:pointer;transition:transform 0.1s;';
-              btn.onclick = function() {
-                btn.style.transform = 'scale(0.95)';
-                setTimeout(function(){ btn.style.transform = 'scale(1)'; }, 100);
-                btn.innerHTML = '<span style="font-size:18px;margin-right:6px;">⏳</span>抓取中...';
+              btn.className = 'nc-fab';
+              btn.innerHTML = '<span class="nc-icon">✨</span>抓取课表';
+              btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                btn.innerHTML = '<span class="nc-icon">⏳</span>抓取中...';
+                btn.style.pointerEvents = 'none';
+                btn.style.opacity = '0.7';
                 if (window.mobileApp && window.mobileApp.postMessage) {
                   window.mobileApp.postMessage({ action: 'captureNow' });
                 }
-              };
-              document.body.appendChild(btn);
+              }, true);
+              shadow.appendChild(btn);
+
+              // 挂到 documentElement 确保不受 body 的 transform/overflow 影响
+              document.documentElement.appendChild(root);
             })();
           `
         });
@@ -284,6 +329,9 @@ export function useAutoImport(): UseAutoImportReturn {
           toolbarColor: '#6d23f9',
           showArrow: true,
           isPresentAfterPageLoad: true,
+          activeNativeNavigationForWebview: true,
+          preventDeeplink: true,
+          toolbarType: 'navigation' as any,
         });
         setStatus('browsing');
       } catch (e2) {
