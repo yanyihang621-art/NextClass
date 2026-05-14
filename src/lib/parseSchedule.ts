@@ -1,18 +1,16 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- * parseSchedule.ts — 正方教务系统课表 HTML 源码解析器（北化大适配版）
+ * parseSchedule.ts — 课表 HTML 解析统一入口
  * ═══════════════════════════════════════════════════════════════════════════
  *
- * 功能：将正方教务系统（含北京化工大学等变体）的课表页面 HTML 源码，
- *       解析为标准化的 ParsedCourse[] 数组。
+ * 架构：
+ *   1. Fast-path：北化大正方系统专有解析器（通过 td id="day-period" 精准定位）
+ *   2. Fallback ：通用 DOM 矩阵引擎（GenericMatrixParser — 二维降维打击）
  *
- * 适配重点：
- *   1. td 的 id 属性格式为 "day-period"（如 "1-1" = 星期一第1节）
- *   2. 每个 td 内可能有多个 <div class="timetable_con"> 块
- *   3. 课程名从 <span class="title"> 提取
- *   4. 周次、地点、教师等通过 glyphicon 图标的父级 tooltip 识别
- *   5. rowspan 控制连排课跨度
+ * 外部消费者只需调用 smartParseSchedule() 即可，内部自动路由。
  */
+
+import { findTimetable, genericMatrixParse } from './parsers/GenericMatrixParser';
 
 // ─── 类型定义 ───────────────────────────────────────────────────────────────
 
@@ -27,52 +25,45 @@ export interface ParsedCourse {
   periodEnd: number;   // 结束节次
 }
 
-/** 虚拟网格中每个单元格的占位信息 */
-interface GridCell {
-  occupied: boolean;
-  /** 原始 <td> 元素引用（仅主单元格持有） */
-  element?: HTMLTableCellElement;
-  /** rowspan 的值（仅主单元格持有） */
-  rowSpan?: number;
-}
-
 // ─── 主入口 ─────────────────────────────────────────────────────────────────
 
 /**
- * 解析课表 HTML 源码，返回标准化课程数组
+ * 解析课表 HTML 源码，返回标准化课程数组。
+ *
+ * 策略 A（Fast-path）：利用正方 td id 属性精准解析（北化大等）
+ * 策略 B（Fallback） ：通用 DOM 矩阵引擎
  */
-export function parseScheduleData(
-  htmlString: string,
-  _systemType: string = 'zhengfang'
-): ParsedCourse[] {
-  const courses: ParsedCourse[] = [];
+export function parseScheduleData(htmlString: string): ParsedCourse[] {
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlString, 'text/html');
 
-  // ── Step 1: 使用 DOMParser 解析 HTML ──────────────────────────────────
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(htmlString, 'text/html');
+    // 定位课表主体 <table>（使用通用引擎的定位函数）
+    const table = findTimetable(doc);
+    if (!table) {
+      console.warn('[parseSchedule] 未找到课表主体 <table>');
+      return [];
+    }
 
-  // ── Step 2: 定位课表主体 <table> ──────────────────────────────────────
-  const table = findScheduleTable(doc);
-  if (!table) {
-    console.warn('[parseSchedule] 未找到课表主体 <table>');
-    return courses;
+    // ── 策略 A：正方系统 Fast-path（td id="day-period"） ──
+    const idBasedResult = parseByTdId(table);
+    if (idBasedResult.length > 0) {
+      console.log(`[parseSchedule] Fast-path 命中，解析到 ${idBasedResult.length} 条课程`);
+      return deduplicateCourses(idBasedResult);
+    }
+
+    // ── 策略 B：通用矩阵引擎 Fallback ──
+    console.log('[parseSchedule] Fast-path 未命中，切换到通用矩阵引擎');
+    const genericResult = genericMatrixParse(htmlString);
+    return deduplicateCourses(genericResult);
+  } catch (e) {
+    console.error('[parseSchedule] 解析异常:', e);
+    return [];
   }
-
-  // ── Step 3: 尝试两种策略 ──────────────────────────────────────────────
-
-  // 策略 A：利用 td id 属性（北化大格式，id="day-period"）
-  const idBasedResult = parseByTdId(table);
-  if (idBasedResult.length > 0) {
-    return deduplicateCourses(idBasedResult);
-  }
-
-  // 策略 B：基于虚拟网格的通用解析（兜底）
-  const gridBasedResult = parseByVirtualGrid(table);
-  return deduplicateCourses(gridBasedResult);
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// 策略 A：基于 td id 属性的解析（北化大 / 新版正方系统）
+// Fast-path：北化大正方系统专有解析器
 // ═════════════════════════════════════════════════════════════════════════════
 
 /**
@@ -191,8 +182,6 @@ function parseTimetableConBlock(
   }
 
   // ── 从周次字段中提取覆盖节次（如果有） ────────────────────────────────
-  // 某些情况下，周次字段中的 "(3-5节)" 可能与位置推算的节次不一致
-  // 我们优先使用 td 的 rowspan 推算的节次（因为更可靠），但记录原始信息
   let actualPeriodStart = periodStart;
   let actualPeriodEnd = periodEnd;
 
@@ -220,6 +209,8 @@ function parseTimetableConBlock(
   };
 }
 
+// ─── Fast-path 辅助函数 ──────────────────────────────────────────────────────
+
 /**
  * 从节/周文本中提取周次信息
  * 输入示例: "(1-2节)1-8周" / "(3-5节)1-17周" / "(3-4节)1-3周,5-17周" / "(3-4节)4周"
@@ -241,7 +232,7 @@ function extractWeeks(text: string): string {
 }
 
 /**
- * 备选：当 tooltip 解析不可用时，使用纯文本模式解析
+ * 备选：当 tooltip 解析不可用时，使用纯文本模式解析（仅用于 Fast-path 内部）
  */
 function parseCourseBlockByText(
   block: HTMLElement,
@@ -282,242 +273,6 @@ function parseCourseBlockByText(
   return { name, teacher, location, weeks, day, periodStart, periodEnd };
 }
 
-// ═════════════════════════════════════════════════════════════════════════════
-// 策略 B：基于虚拟网格的通用解析（兜底方案）
-// ═════════════════════════════════════════════════════════════════════════════
-
-function parseByVirtualGrid(table: HTMLTableElement): ParsedCourse[] {
-  const courses: ParsedCourse[] = [];
-  const rows = Array.from(table.querySelectorAll('tr'));
-  if (rows.length < 2) return courses;
-
-  const { dayColumnMap, dataStartRow } = analyzeHeader(rows);
-  if (Object.keys(dayColumnMap).length === 0) return courses;
-
-  const dataRows = rows.slice(dataStartRow);
-
-  // 过滤掉包含 "其它课程" 的尾行
-  const filteredRows = dataRows.filter(tr => {
-    const text = tr.textContent || '';
-    return !text.includes('其它课程');
-  });
-
-  // 计算最大列数
-  const maxCols = Math.max(
-    ...rows.map(row => {
-      let count = 0;
-      row.querySelectorAll('td, th').forEach(cell => {
-        count += (cell as HTMLTableCellElement).colSpan || 1;
-      });
-      return count;
-    })
-  );
-
-  // 虚拟网格
-  const grid: GridCell[][] = Array.from({ length: filteredRows.length }, () =>
-    Array.from({ length: maxCols }, () => ({ occupied: false }))
-  );
-
-  // 节次计数器：跟踪每行对应的实际节次
-  // 因为"上午"/"下午"/"晚上"的 rowspan 会占一列，需要正确映射
-  let currentPeriod = 1;
-  const rowToPeriod: number[] = [];
-
-  for (let rowIdx = 0; rowIdx < filteredRows.length; rowIdx++) {
-    const tr = filteredRows[rowIdx];
-    // 检查是否有 "festival" 类的节次指示（如 <span class="festival">1</span>）
-    const festivalEl = tr.querySelector('.festival');
-    if (festivalEl) {
-      const periodNum = parseInt(festivalEl.textContent || '', 10);
-      if (!isNaN(periodNum)) {
-        currentPeriod = periodNum;
-      }
-    }
-    rowToPeriod[rowIdx] = currentPeriod;
-    currentPeriod++;
-  }
-
-  // 遍历填充虚拟网格
-  for (let rowIdx = 0; rowIdx < filteredRows.length; rowIdx++) {
-    const tr = filteredRows[rowIdx];
-    const cells = Array.from(tr.querySelectorAll('td, th'));
-    let gridCol = 0;
-
-    for (const cell of cells) {
-      const td = cell as HTMLTableCellElement;
-
-      while (gridCol < maxCols && grid[rowIdx][gridCol].occupied) {
-        gridCol++;
-      }
-      if (gridCol >= maxCols) break;
-
-      const colSpan = td.colSpan || 1;
-      const rowSpan = td.rowSpan || 1;
-
-      for (let r = 0; r < rowSpan && (rowIdx + r) < filteredRows.length; r++) {
-        for (let c = 0; c < colSpan && (gridCol + c) < maxCols; c++) {
-          grid[rowIdx + r][gridCol + c] = {
-            occupied: true,
-            element: (r === 0 && c === 0) ? td : undefined,
-            rowSpan: (r === 0 && c === 0) ? rowSpan : undefined,
-          };
-        }
-      }
-
-      // 解析单元格
-      const dayOfWeek = dayColumnMap[gridCol];
-      if (!dayOfWeek) {
-        gridCol += colSpan;
-        continue;
-      }
-
-      // 检查是否有 timetable_con 块
-      const courseBlocks = td.querySelectorAll('.timetable_con');
-      if (courseBlocks.length > 0) {
-        const pStart = rowToPeriod[rowIdx] || (rowIdx + 1);
-        const pEnd = pStart + rowSpan - 1;
-
-        for (const block of Array.from(courseBlocks)) {
-          const parsed = parseTimetableConBlock(
-            block as HTMLElement,
-            dayOfWeek,
-            pStart,
-            pEnd
-          );
-          if (parsed) courses.push(parsed);
-        }
-      } else {
-        // 纯文本解析
-        const textContent = getCellText(td);
-        if (!isEmptyCell(textContent)) {
-          const pStart = rowToPeriod[rowIdx] || (rowIdx + 1);
-          const pEnd = pStart + rowSpan - 1;
-          const fallback = parseCourseBlockByText(td, dayOfWeek, pStart, pEnd);
-          if (fallback) courses.push(fallback);
-        }
-      }
-
-      gridCol += colSpan;
-    }
-  }
-
-  return courses;
-}
-
-// ─── 辅助函数 ───────────────────────────────────────────────────────────────
-
-/**
- * 在文档中查找包含课表数据的主 <table>
- */
-function findScheduleTable(doc: Document): HTMLTableElement | null {
-  const tables = Array.from(doc.querySelectorAll('table'));
-
-  // 策略 1：通过 id 匹配（北化大 kbgrid_table_0）
-  const kbTable = doc.querySelector('table[id^="kbgrid"]') as HTMLTableElement;
-  if (kbTable) return kbTable;
-
-  // 策略 2：包含"星期"关键字的表格
-  const dayKeywords = ['星期一', '星期二', '星期三', '星期四', '星期五', '周一', '周二', '周三'];
-  for (const table of tables) {
-    const headerText = table.textContent || '';
-    const matchCount = dayKeywords.filter(kw => headerText.includes(kw)).length;
-    if (matchCount >= 3) {
-      return table;
-    }
-  }
-
-  // 策略 3：通过常见 id/class 定位
-  const idPatterns = ['kbtable', 'kblist', 'kebiao', 'table1', 'timetable'];
-  for (const pattern of idPatterns) {
-    const found = doc.querySelector(`table[id*="${pattern}"], table[class*="${pattern}"]`) as HTMLTableElement;
-    if (found) return found;
-  }
-
-  // 策略 4：找行列最多的表格
-  let bestTable: HTMLTableElement | null = null;
-  let maxCells = 0;
-  for (const table of tables) {
-    const cellCount = table.querySelectorAll('td').length;
-    if (cellCount > maxCells) {
-      maxCells = cellCount;
-      bestTable = table;
-    }
-  }
-
-  return maxCells >= 20 ? bestTable : null;
-}
-
-/**
- * 分析表头行，建立"虚拟网格列号 → 星期几"的映射
- */
-function analyzeHeader(rows: HTMLTableRowElement[]): {
-  dayColumnMap: Record<number, number>;
-  dataStartRow: number;
-  timeColumnIndex: number;
-} {
-  const dayColumnMap: Record<number, number> = {};
-  let dataStartRow = 1;
-  let timeColumnIndex = 0;
-
-  const dayKeywordMap: Record<string, number> = {
-    '星期一': 1, '周一': 1, 'Mon': 1, 'Monday': 1,
-    '星期二': 2, '周二': 2, 'Tue': 2, 'Tuesday': 2,
-    '星期三': 3, '周三': 3, 'Wed': 3, 'Wednesday': 3,
-    '星期四': 4, '周四': 4, 'Thu': 4, 'Thursday': 4,
-    '星期五': 5, '周五': 5, 'Fri': 5, 'Friday': 5,
-    '星期六': 6, '周六': 6, 'Sat': 6, 'Saturday': 6,
-    '星期日': 7, '星期天': 7, '周日': 7, 'Sun': 7, 'Sunday': 7,
-  };
-
-  for (let rowIdx = 0; rowIdx < Math.min(rows.length, 5); rowIdx++) {
-    const row = rows[rowIdx];
-    const cells = Array.from(row.querySelectorAll('td, th'));
-    let gridCol = 0;
-
-    for (const cell of cells) {
-      const td = cell as HTMLTableCellElement;
-      const text = (td.textContent || '').trim();
-      const colSpan = td.colSpan || 1;
-
-      // 跳过整行合并的标题行
-      if (colSpan >= 7) {
-        gridCol += colSpan;
-        continue;
-      }
-
-      for (const [keyword, dayNum] of Object.entries(dayKeywordMap)) {
-        if (text.includes(keyword)) {
-          for (let c = 0; c < colSpan; c++) {
-            dayColumnMap[gridCol + c] = dayNum;
-          }
-          break;
-        }
-      }
-
-      if (/节次|时间|课次|时间段/.test(text)) {
-        timeColumnIndex = gridCol;
-      }
-
-      gridCol += colSpan;
-    }
-
-    if (Object.keys(dayColumnMap).length >= 5) {
-      dataStartRow = rowIdx + 1;
-      break;
-    }
-  }
-
-  // 默认映射
-  if (Object.keys(dayColumnMap).length === 0) {
-    console.warn('[parseSchedule] 使用默认列映射 (col 2-8 → 周一~日)');
-    for (let i = 2; i <= 8; i++) {
-      dayColumnMap[i] = i - 1;
-    }
-  }
-
-  return { dayColumnMap, dataStartRow, timeColumnIndex };
-}
-
 /**
  * 清理文本：去除多余空白和特殊字符
  */
@@ -526,28 +281,6 @@ function cleanText(text: string): string {
     .replace(/\u00a0/g, ' ')  // &nbsp;
     .replace(/\s+/g, ' ')
     .trim();
-}
-
-/**
- * 获取 <td> 的文本内容，将 <br> 替换为换行符
- */
-function getCellText(td: HTMLTableCellElement): string {
-  const clone = td.cloneNode(true) as HTMLElement;
-  clone.querySelectorAll('br').forEach(br => {
-    br.replaceWith('\n');
-  });
-  return clone.textContent || '';
-}
-
-/**
- * 判断单元格是否为空白
- */
-function isEmptyCell(text: string): boolean {
-  const cleaned = text
-    .replace(/\u00a0/g, '')
-    .replace(/\s/g, '')
-    .replace(/[-—]/g, '');
-  return cleaned.length === 0;
 }
 
 /**
@@ -571,38 +304,6 @@ function deduplicateCourses(courses: ParsedCourse[]): ParsedCourse[] {
 export function parseScheduleFragment(htmlFragment: string): ParsedCourse[] {
   const wrappedHtml = `<!DOCTYPE html><html><body>${htmlFragment}</body></html>`;
   return parseScheduleData(wrappedHtml);
-}
-
-// ═════════════════════════════════════════════════════════════════════════════
-// 多教务系统 Parser 路由
-// ═════════════════════════════════════════════════════════════════════════════
-
-/**
- * 强智教务系统解析器（占位）
- * TODO: 实现真实的强智系统 HTML 表格解析
- */
-function parseQiangzhi(htmlString: string): ParsedCourse[] {
-  console.warn('[parseSchedule] 强智教务系统解析器尚未实现，将使用通用解析。');
-  // 强智系统的表格结构与正方类似，暂时复用通用解析逻辑
-  return parseScheduleData(htmlString, 'qiangzhi');
-}
-
-/**
- * 金智教务系统解析器（占位）
- * TODO: 实现真实的金智系统 HTML 解析
- */
-function parseKingosoft(htmlString: string): ParsedCourse[] {
-  console.warn('[parseSchedule] 金智教务系统解析器尚未实现，将使用通用解析。');
-  return parseScheduleData(htmlString, 'kingosoft');
-}
-
-/**
- * 通用文本提取解析器（兜底）
- * 提取页面中所有 <table> 并尝试匹配课表结构
- */
-function parseGeneric(htmlString: string): ParsedCourse[] {
-  console.warn('[parseSchedule] 使用通用解析器（兜底）。');
-  return parseScheduleData(htmlString, 'generic');
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -658,61 +359,52 @@ export function detectSystemType(html: string): string {
   return 'generic';
 }
 
+// ═════════════════════════════════════════════════════════════════════════════
+// 智能解析入口（统一对外 API）
+// ═════════════════════════════════════════════════════════════════════════════
+
 /**
- * 智能解析入口：根据 systemType 路由到不同的解析器
+ * 智能解析入口：所有教务系统统一入口。
  *
- * 当 systemType 为 'auto' 时，会先通过 detectSystemType 自动识别，
- * 然后路由到对应的解析器。
+ * 流程：
+ *   1. 先尝试 parseScheduleData（内含正方 Fast-path + 通用矩阵 Fallback）
+ *   2. 无论 systemType 为何值，最终都走同一条路径
+ *      （旧的 qiangzhi/kingosoft 占位解析器已被通用矩阵引擎取代）
  */
 export function smartParseSchedule(
   input: string,
-  systemType: string = 'zhengfang'
+  systemType: string = 'auto'
 ): ParsedCourse[] {
-  const trimmed = input.trim();
+  try {
+    const trimmed = input.trim();
 
-  const isFullPage = /<!doctype|<html|<head|<body/i.test(trimmed);
-  const hasTable = /<table[\s>]/i.test(trimmed);
+    const isFullPage = /<!doctype|<html|<head|<body/i.test(trimmed);
+    const hasTable = /<table[\s>]/i.test(trimmed);
 
-  if (!isFullPage && !hasTable) {
-    console.warn('[parseSchedule] 输入不像有效的 HTML 内容');
+    if (!isFullPage && !hasTable) {
+      console.warn('[parseSchedule] 输入不像有效的 HTML 内容');
+      return [];
+    }
+
+    // 自动识别（仅用于日志，不再影响路由）
+    if (systemType === 'auto') {
+      detectSystemType(trimmed);
+    }
+
+    // 统一走 parseScheduleData：Fast-path 优先，Fallback 通用矩阵引擎
+    const result = parseScheduleData(trimmed);
+
+    if (result.length === 0 && isFullPage) {
+      console.warn(
+        '[parseSchedule] 完整页面中未找到课表数据。\n' +
+        '正方系统 V9.0 的课表通过 AJAX 动态加载，"查看源代码" 中不含课表。\n' +
+        '请改为：在已加载课表的页面按 F12 → 选择 #table1 元素 → 右键 "Copy outerHTML"'
+      );
+    }
+
+    return result;
+  } catch (e) {
+    console.error('[parseSchedule] smartParseSchedule 异常:', e);
     return [];
   }
-
-  // ── 自动识别模式 ──
-  const effectiveType = systemType === 'auto'
-    ? detectSystemType(trimmed)
-    : systemType;
-
-  // ── 根据教务系统类型路由到对应解析器 ──
-  let result: ParsedCourse[];
-
-  switch (effectiveType) {
-    case 'zhengfang':
-      result = parseScheduleData(trimmed, effectiveType);
-      break;
-
-    case 'qiangzhi':
-      result = parseQiangzhi(trimmed);
-      break;
-
-    case 'kingosoft':
-      result = parseKingosoft(trimmed);
-      break;
-
-    case 'generic':
-    case 'custom':
-    default:
-      result = parseGeneric(trimmed);
-      break;
-  }
-
-  if (result.length === 0 && isFullPage) {
-    console.warn(
-      '[parseSchedule] 完整页面中未找到课表数据。\n' +
-      '正方系统 V9.0 的课表通过 AJAX 动态加载，"查看源代码" 中不含课表。\n' +
-      '请改为：在已加载课表的页面按 F12 → 选择 #table1 元素 → 右键 "Copy outerHTML"'
-    );
-  }
-
-  return result;
 }
