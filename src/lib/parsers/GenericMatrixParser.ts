@@ -276,7 +276,8 @@ function weeksToString(weeks: number[]): string {
 
 const WEEKS_REGEX = /(\d[\d,，\-–—~]+周(?:\([单双奇偶]\))?|[单双奇偶]周|\d+-\d+(?:\([单双奇偶]\))?)/;
 const LOCATION_REGEX = /([A-Za-z0-9\u4e00-\u9fa5]*(?:楼|教室|实验室|机房|馆|中心|堂|院|场|厅|教|室|栋|区)[A-Za-z0-9\u4e00-\u9fa5\-]*|[A-Z]?\d{3,5}[A-Za-z]?|主教\d+|[东西南北]?\d+(?:号)?教?\d+)/;
-const TEACHER_REGEX = /^[\u4e00-\u9fa5]{2,4}$/;
+const TEACHER_REGEX = /^(?:教师[:：]|老师[:：])?[\u4e00-\u9fa5a-zA-Z\s\/\-.]{2,15}$/;
+const TEACHER_PREFIX_REGEX = /^(?:教师|老师)[:：]\s*/;
 
 interface ExtractedInfo {
   name: string;
@@ -325,26 +326,33 @@ function extractCourseInfos(text: string, html: string): ExtractedInfo[] {
         // 跳过时间段标记
         if (/^(上午|下午|晚上|午间)$/.test(line)) continue;
 
+        // 检测周次
         if (!weeksStr && WEEKS_REGEX.test(line)) {
           const m = line.match(WEEKS_REGEX);
           if (m) weeksStr = m[0];
           // 周次行可能同时包含地点，继续检测
         }
 
+        // 检测地点
         if (!location && LOCATION_REGEX.test(line)) {
           const m = line.match(LOCATION_REGEX);
           if (m) location = m[0].trim();
         }
 
+        // 检测教师（兼容 "教师：张三" / "老师：李四" 前缀）
         if (!teacher && TEACHER_REGEX.test(line)) {
-          teacher = line;
+          teacher = line.replace(TEACHER_PREFIX_REGEX, '').trim();
           continue;
         }
 
-        // 课程名通常是第一行有意义的中文文本
-        if (!name && /[\u4e00-\u9fa5]/.test(line) && line.length >= 2) {
-          // 排除明显是周次或地点的行
-          if (!WEEKS_REGEX.test(line) || line.length > 15) {
+        // 课程名判定：不再强制要求包含中文
+        // 只要 line 不是纯数字、不是时间段声明、且未被识别为周次/地点/教师，
+        // 第一个满足条件的有效字符串即为课程名
+        if (!name && line.length >= 2) {
+          const isWeeksLine = WEEKS_REGEX.test(line) && line.length <= 15;
+          const isLocationLine = !!(location && line === location);
+          const isTeacherLine = !!(teacher && line.replace(TEACHER_PREFIX_REGEX, '').trim() === teacher);
+          if (!isWeeksLine && !isLocationLine && !isTeacherLine) {
             name = line.replace(/[★◇●○☆◆■□▲△▽▼※]$/, '').trim();
           }
         }
@@ -465,13 +473,18 @@ export function genericMatrixParse(htmlString: string): ParsedCourse[] {
     const seen = new Set<string>();
 
     // 构建行 → 节次映射
+    // 注意：不再无脑 currentPeriod++，改为依赖节次列中的实际数字。
+    // 如果节次列无数字可推断，则使用行偏移量作为兜底。
     const rowPeriodMap: number[] = [];
-    let currentPeriod = 1;
     for (let r = header.dataStartRow; r < matrix.length; r++) {
       const inferred = inferPeriodForRow(matrix, r, header.periodColIndex);
-      if (inferred > 0) currentPeriod = inferred;
-      rowPeriodMap[r] = currentPeriod;
-      currentPeriod++;
+      if (inferred > 0) {
+        rowPeriodMap[r] = inferred;
+      } else {
+        // 兜底：如果前一行有值，取前一行 +1；否则按行偏移量计算
+        const prev = r > header.dataStartRow ? rowPeriodMap[r - 1] : 0;
+        rowPeriodMap[r] = prev > 0 ? prev + 1 : (r - header.dataStartRow + 1);
+      }
     }
 
     // 遍历数据区域
