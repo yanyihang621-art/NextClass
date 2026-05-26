@@ -125,7 +125,7 @@ export default function NextClass() {
   return (
     <div className="bg-[#F7F7F9] text-on-surface min-h-screen font-body">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 bg-[#F7F7F9] sticky top-0 z-10">
+      <div className="flex items-center justify-between p-4 pt-[max(1rem,env(safe-area-inset-top))] bg-[#F7F7F9] sticky top-0 z-10">
         <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-slate-200 transition-colors">
           <span className="material-symbols-outlined text-slate-800">arrow_back_ios_new</span>
         </button>

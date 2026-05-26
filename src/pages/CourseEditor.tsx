@@ -392,7 +392,7 @@ export default function CourseEditor() {
         </div>
       )}
 
-      <header className="fixed top-0 w-full z-40 bg-glass shadow-sm px-4 py-3 flex justify-between items-center">
+      <header className="fixed top-0 w-full z-40 bg-glass shadow-sm px-4 pb-4 pt-[max(1rem,env(safe-area-inset-top))] flex justify-between items-center">
         <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-slate-100 transition-colors">
           <span className="material-symbols-outlined text-slate-600">close</span>
         </button>
@@ -402,7 +402,7 @@ export default function CourseEditor() {
         </button>
       </header>
 
-      <main className="pt-20 px-4 max-w-2xl mx-auto space-y-6">
+      <main className="pt-[calc(5rem+env(safe-area-inset-top))] px-4 max-w-2xl mx-auto space-y-6">
         {/* 批量导入模式提示 */}
         {isImportMode && (
           <div className="bg-primary/5 border border-primary/15 rounded-2xl p-4 flex items-start gap-3">
