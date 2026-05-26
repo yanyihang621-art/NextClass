@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "android": "powershell -Command \"$env:JAVA_HOME='D:\\\\JDK-21'; $env:ANDROID_HOME='D:\\\\AndroidStudioSDK'; npx cap run android\""
   },
   "dependencies": {
     "@capacitor/android": "^8.3.0",
