@@ -33,6 +33,7 @@ function AnimatedRoutes() {
 
   return (
     <AnimatePresence mode="wait">
+      {/* @ts-expect-error - key is required by AnimatePresence to trigger page transition animations */}
       <Routes location={location} key={location.pathname}>
         {/* Auth pages */}
         <Route path="/login" element={<Login />} />
@@ -68,11 +69,18 @@ function AnimatedRoutes() {
 export default function App() {
   // --- StatusBar setup ---
   useEffect(() => {
-    if (Capacitor.isNativePlatform()) {
-      StatusBar.setOverlaysWebView({ overlay: true });
-      StatusBar.setStyle({ style: Style.Dark });
-      StatusBar.setBackgroundColor({ color: '#00000000' });
-    }
+    const setupStatusBar = async () => {
+      try {
+        if (Capacitor.isNativePlatform()) {
+          await StatusBar.setOverlaysWebView({ overlay: true });
+          await StatusBar.setStyle({ style: Style.Dark });
+          await StatusBar.setBackgroundColor({ color: '#00000000' });
+        }
+      } catch (error) {
+        console.warn('StatusBar configuration failed:', error);
+      }
+    };
+    setupStatusBar();
   }, []);
 
   return (

@@ -142,7 +142,7 @@ export default function Import() {
 
   return (
     <div className="app-page bg-[#F7F7F9] text-on-surface font-body">
-      <main className="app-content pt-6 px-4 pb-4 max-w-2xl mx-auto">
+      <main className="app-content pt-[max(env(safe-area-inset-top),_1.5rem)] px-4 pb-4 max-w-2xl mx-auto">
 
         {/* ═══════════════════════════════════════════
             Section 1: 教务系统导入（选择学校）

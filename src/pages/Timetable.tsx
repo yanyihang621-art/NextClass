@@ -142,7 +142,7 @@ export default function Timetable() {
   return (
     <div className="app-page text-on-surface selection:bg-primary-container font-body bg-white">
       {/* Header section fixed */}
-      <div className="pt-4 px-2 pb-2 flex-shrink-0 z-10 bg-white/90 backdrop-blur-sm">
+      <div className="pt-[max(env(safe-area-inset-top),_1rem)] px-2 pb-2 flex-shrink-0 z-10 bg-white/90 backdrop-blur-sm">
         <div className="flex justify-between items-center px-1">
           <div className="flex flex-col">
             <div className="flex items-center gap-0.5 -ml-1">

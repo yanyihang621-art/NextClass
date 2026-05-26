@@ -105,6 +105,36 @@ function courseToDbRow(course: Course) {
 export const CourseProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
 
+  /**
+   * 脏标记：当本地有尚未同步到 Supabase 的变更时为 true。
+   * 在 dirty 状态下，fetchCourses 拉取到的云端数据不会覆盖本地数据，
+   * 避免用户导入课表后快速退出 → 再次打开时未同步的课表被云端旧数据覆盖而消失。
+   *
+   * 使用 ref 而非 state，因为仅在异步回调中读取，不需要触发重渲染。
+   */
+  const dirtyRef = React.useRef(false);
+
+  /**
+   * 待同步到 Supabase 的操作计数器。
+   * 每发起一次异步写操作 +1，完成（成功或失败）后 -1。
+   * 当计数器归零时将 dirtyRef 置为 false。
+   */
+  const pendingOpsRef = React.useRef(0);
+
+  /** 发起一次待同步操作 → 标脏 + 计数器 +1 */
+  const markDirty = () => {
+    dirtyRef.current = true;
+    pendingOpsRef.current += 1;
+  };
+
+  /** 一次同步操作完成 → 计数器 -1，归零时解除脏标记 */
+  const markSynced = () => {
+    pendingOpsRef.current = Math.max(0, pendingOpsRef.current - 1);
+    if (pendingOpsRef.current === 0) {
+      dirtyRef.current = false;
+    }
+  };
+
   // ── 离线优先：同步从 localStorage 加载缓存作为初始状态，保证 UI 瞬间渲染 ──
   const [courses, setCourses] = useState<Course[]>(() => {
     if (!user) return [];
@@ -150,9 +180,14 @@ export const CourseProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           console.error('Failed to fetch courses from Supabase:', error);
           // 网络失败时保持 localStorage 缓存的数据，不清空
         } else if (data) {
-          const parsed = data.map(dbRowToCourse);
-          setCourses(parsed);
-          localStorage.setItem(cacheKey, JSON.stringify(parsed));
+          // ★ 关键保护：如果本地有未同步的变更，不用云端数据覆盖本地
+          if (dirtyRef.current) {
+            console.info('[CourseContext] 本地有未同步的变更，跳过云端数据覆盖');
+          } else {
+            const parsed = data.map(dbRowToCourse);
+            setCourses(parsed);
+            localStorage.setItem(cacheKey, JSON.stringify(parsed));
+          }
         }
       } catch (e) {
         console.error('Network error fetching courses:', e);
@@ -168,10 +203,12 @@ export const CourseProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const color = getAutoColor(course, prev);
       const newCourse = { ...course, color, bg: `${color}20` };
       
-      // Async persist to Supabase
+      // Async persist to Supabase（标脏 → 写入 → 同步完成后解除脏标记）
       if (user) {
+        markDirty();
         supabase.from('courses').insert({ ...courseToDbRow(newCourse), user_id: user.id }).then(({ error }) => {
           if (error) console.error('Failed to add course to Supabase:', error);
+          markSynced();
         });
       }
 
@@ -189,8 +226,10 @@ export const CourseProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       // Async persist to Supabase
       if (user) {
+        markDirty();
         supabase.from('courses').update({ ...courseToDbRow(updatedCourse), user_id: user.id }).eq('id', id).then(({ error }) => {
           if (error) console.error('Failed to update course in Supabase:', error);
+          markSynced();
         });
       }
 
@@ -204,8 +243,10 @@ export const CourseProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setCourses(prev => {
       // Async persist to Supabase
       if (user) {
+        markDirty();
         supabase.from('courses').delete().eq('id', id).then(({ error }) => {
           if (error) console.error('Failed to delete course from Supabase:', error);
+          markSynced();
         });
       }
 
@@ -219,8 +260,10 @@ export const CourseProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setCourses(prev => {
       // Async persist to Supabase
       if (user) {
+        markDirty();
         supabase.from('courses').delete().eq('timetable_id', timetableId).then(({ error }) => {
           if (error) console.error('Failed to delete courses by timetable from Supabase:', error);
+          markSynced();
         });
       }
 

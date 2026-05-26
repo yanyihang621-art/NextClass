@@ -98,6 +98,25 @@ function timetableToDbRow(t: TimetableConfig) {
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
 
+  /**
+   * 脏标记：当本地 timetables 有尚未同步到 Supabase 的变更时为 true。
+   * 在 dirty 状态下，fetchTimetables 拉取到的云端数据不会覆盖本地数据。
+   */
+  const dirtyRef = React.useRef(false);
+  const pendingOpsRef = React.useRef(0);
+
+  const markDirty = () => {
+    dirtyRef.current = true;
+    pendingOpsRef.current += 1;
+  };
+
+  const markSynced = () => {
+    pendingOpsRef.current = Math.max(0, pendingOpsRef.current - 1);
+    if (pendingOpsRef.current === 0) {
+      dirtyRef.current = false;
+    }
+  };
+
   // UI preferences — stay in localStorage (no cloud sync needed)
   const [themeColor, setThemeColor] = useState<ThemeColor>(() => {
     return (localStorage.getItem('themeColor') as ThemeColor) || 'purple';
@@ -175,9 +194,14 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
           console.error('Failed to fetch timetables from Supabase:', error);
           // 网络失败时保持 localStorage 缓存的数据，不清空
         } else if (data) {
-          const parsed = data.map(dbRowToTimetable);
-          setTimetablesState(parsed);
-          localStorage.setItem(cacheKey, JSON.stringify(parsed));
+          // ★ 关键保护：如果本地有未同步的变更，不用云端数据覆盖本地
+          if (dirtyRef.current) {
+            console.info('[SettingsContext] 本地有未同步的 timetables 变更，跳过云端数据覆盖');
+          } else {
+            const parsed = data.map(dbRowToTimetable);
+            setTimetablesState(parsed);
+            localStorage.setItem(cacheKey, JSON.stringify(parsed));
+          }
         }
       } catch (e) {
         console.error('Network error fetching timetables:', e);
@@ -201,19 +225,24 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       // Added or updated timetables
       const upserted = newTimetables;
 
-      // Async persist to Supabase
+      // Async persist to Supabase（标脏 → 写入 → 同步完成后解除脏标记）
+      markDirty();
       (async () => {
-        // Delete removed timetables
-        for (const id of deletedIds) {
-          const { error } = await supabase.from('timetables').delete().eq('id', id);
-          if (error) console.error('Failed to delete timetable from Supabase:', error);
-        }
+        try {
+          // Delete removed timetables
+          for (const id of deletedIds) {
+            const { error } = await supabase.from('timetables').delete().eq('id', id);
+            if (error) console.error('Failed to delete timetable from Supabase:', error);
+          }
 
-        // Upsert all current timetables
-        if (upserted.length > 0) {
-          const rows = upserted.map(t => ({ ...timetableToDbRow(t), user_id: user.id }));
-          const { error } = await supabase.from('timetables').upsert(rows, { onConflict: 'id' });
-          if (error) console.error('Failed to upsert timetables to Supabase:', error);
+          // Upsert all current timetables
+          if (upserted.length > 0) {
+            const rows = upserted.map(t => ({ ...timetableToDbRow(t), user_id: user.id }));
+            const { error } = await supabase.from('timetables').upsert(rows, { onConflict: 'id' });
+            if (error) console.error('Failed to upsert timetables to Supabase:', error);
+          }
+        } finally {
+          markSynced();
         }
       })();
 

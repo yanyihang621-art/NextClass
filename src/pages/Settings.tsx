@@ -178,7 +178,7 @@ export default function Settings() {
 
   return (
     <div className="app-page bg-[#F7F7F9] text-on-surface font-body">
-      <main className="app-content pt-12 px-2 pb-4 max-w-2xl mx-auto">
+      <main className="app-content pt-[max(env(safe-area-inset-top),_3rem)] px-2 pb-4 max-w-2xl mx-auto">
         {/* User Profile Section */}
         <section className="flex flex-col items-center mb-8">
           <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-4 border-2 border-white shadow-sm">
@@ -257,7 +257,7 @@ export default function Settings() {
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
             className="fixed inset-0 z-[90] flex flex-col bg-[#F7F7F9]"
           >
-          <div className="flex items-center justify-between p-4 bg-[#F7F7F9] sticky top-0 z-10" style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))' }}>
+          <div className="flex items-center justify-between p-4 pt-[max(1rem,env(safe-area-inset-top))] bg-[#F7F7F9] sticky top-0 z-10">
             <button onClick={() => setIsTimetableManageOpen(false)} className="p-2 -ml-2 rounded-full hover:bg-slate-200 transition-colors">
               <span className="material-symbols-outlined text-slate-800">arrow_back_ios_new</span>
             </button>
@@ -516,7 +516,7 @@ export default function Settings() {
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
             className="fixed inset-0 z-[90] flex flex-col bg-[#F7F7F9]"
           >
-          <div className="flex items-center justify-between p-4 bg-[#F7F7F9] sticky top-0 z-10" style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))' }}>
+          <div className="flex items-center justify-between p-4 pt-[max(1rem,env(safe-area-inset-top))] bg-[#F7F7F9] sticky top-0 z-10">
             <button onClick={handleCancelPersonalization} className="p-2 -ml-2 rounded-full hover:bg-slate-200 transition-colors">
               <span className="material-symbols-outlined text-slate-800">arrow_back_ios_new</span>
             </button>

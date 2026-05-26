@@ -19,8 +19,7 @@ export default function BottomNav() {
 
   return (
     <nav
-      className="flex-shrink-0 flex justify-around items-center px-2 pt-1.5 bg-glass shadow-[0_-10px_40px_rgba(0,0,0,0.05)] rounded-t-[2rem] z-50"
-      style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+      className="flex-shrink-0 flex justify-around items-center px-2 pt-1.5 pb-[max(1rem,env(safe-area-inset-bottom))] bg-glass shadow-[0_-10px_40px_rgba(0,0,0,0.05)] rounded-t-[2rem] z-50"
     >
       {navItems.map((item) => {
         const isActive = path === item.path;

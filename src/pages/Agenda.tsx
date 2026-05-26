@@ -68,7 +68,7 @@ export default function Agenda() {
 
   return (
     <div className="app-page text-on-surface font-body bg-white">
-      <main className="app-content pt-6 px-4 max-w-2xl mx-auto">
+      <main className="app-content pt-[max(env(safe-area-inset-top),_1.5rem)] px-4 max-w-2xl mx-auto">
         <section className="mb-8">
           <div className="flex justify-between items-start mb-2">
             <div>
