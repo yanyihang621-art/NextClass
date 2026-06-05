@@ -178,7 +178,7 @@ export default function Settings() {
 
   return (
     <div className="app-page bg-[#F7F7F9] text-on-surface font-body">
-      <main className="app-content pt-[max(env(safe-area-inset-top),_3rem)] px-4 pb-4 max-w-2xl mx-auto">
+      <main className="app-content pt-[max(env(safe-area-inset-top),_3rem)] px-3 pb-4 max-w-2xl mx-auto">
         {/* User Profile Section */}
         <section className="flex flex-col items-center mb-8">
           <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-4 border-2 border-white shadow-sm">
@@ -191,8 +191,8 @@ export default function Settings() {
         </section>
 
 
-        {/* Menu Group 1 */}
-        <section className="mb-4 bg-white rounded-2xl shadow-sm overflow-hidden">
+        {/* Menu Group */}
+        <section className="mb-6 bg-white rounded-2xl shadow-sm overflow-hidden">
           <button
             onClick={() => setIsTimetableManageOpen(true)}
             className="w-full flex items-center justify-between p-4 bg-white hover:bg-slate-50 transition-colors text-left border-b border-slate-50"
@@ -202,15 +202,11 @@ export default function Settings() {
           </button>
           <button
             onClick={handleOpenPersonalization}
-            className="w-full flex items-center justify-between p-4 bg-white hover:bg-slate-50 transition-colors text-left"
+            className="w-full flex items-center justify-between p-4 bg-white hover:bg-slate-50 transition-colors text-left border-b border-slate-50"
           >
             <span className="text-[16px] text-slate-800">个性化设置</span>
             <span className="material-symbols-outlined text-slate-300">chevron_right</span>
           </button>
-        </section>
-
-        {/* Menu Group 2 */}
-        <section className="mb-6 bg-white rounded-2xl shadow-sm overflow-hidden">
           <button
             className="w-full flex items-center justify-between p-4 bg-white hover:bg-slate-50 transition-colors text-left border-b border-slate-50"
           >
@@ -232,7 +228,7 @@ export default function Settings() {
               await signOut();
               navigate('/login');
             }}
-            className="w-full py-3.5 bg-white text-primary font-bold rounded-xl shadow-sm border border-primary/20/50 hover:bg-primary/10 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+            className="w-full py-4 bg-white text-primary font-bold rounded-2xl shadow-sm border border-primary/20 hover:bg-primary/5 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
           >
             <span className="material-symbols-outlined">logout</span>
             退出登录

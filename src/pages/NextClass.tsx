@@ -133,7 +133,7 @@ export default function NextClass() {
         <div className="w-10"></div>
       </div>
 
-      <main className="px-4 pt-2">
+      <main className="px-3 pt-2">
         <section className="bg-white rounded-2xl shadow-sm overflow-hidden">
           {menuItems.map((item, index) => (
             <button
