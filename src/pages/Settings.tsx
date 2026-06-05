@@ -143,7 +143,7 @@ export default function Settings() {
             });
           });
 
-          // 完成后直接跳转到课表�?
+          // 完成后直接跳转到课表页
           navigate('/timetable', { replace: true });
           return;
         }
@@ -190,6 +190,7 @@ export default function Settings() {
           </div>
         </section>
 
+
         {/* Menu Group 1 */}
         <section className="mb-4 bg-white rounded-2xl shadow-sm overflow-hidden">
           <button
@@ -234,7 +235,7 @@ export default function Settings() {
             className="w-full py-3.5 bg-white text-primary font-bold rounded-xl shadow-sm border border-primary/20/50 hover:bg-primary/10 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
           >
             <span className="material-symbols-outlined">logout</span>
-            退出登�?
+            退出登录
           </button>
         </section>
       </main>
@@ -341,7 +342,7 @@ export default function Settings() {
                 <input type="text" value={editName} onChange={e => setEditName(e.target.value)} className="w-full bg-slate-100 border-none rounded-xl p-3 outline-none focus:ring-2 focus:ring-primary" />
               </div>
               <div>
-                <label className="block text-sm font-bold text-slate-500 mb-1">第一周第一�?(开学日�?</label>
+                <label className="block text-sm font-bold text-slate-500 mb-1">第一周第一天 (开学日期)</label>
                 <div
                   onClick={() => setIsStartDatePickerOpen(true)}
                   className="w-full bg-slate-100 border-none rounded-xl p-3 outline-none text-slate-700 cursor-pointer"
@@ -355,16 +356,16 @@ export default function Settings() {
                   onClick={() => setIsTotalWeeksPickerOpen(true)}
                   className="w-full bg-slate-100 border-none rounded-xl p-3 outline-none text-slate-700 cursor-pointer"
                 >
-                  {editTotalWeeks} �?
+                  {editTotalWeeks} 周
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-slate-500 mb-2">上课时间�?/label>
+                <label className="block text-sm font-bold text-slate-500 mb-2">上课时间表</label>
                 <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
                   {editPeriods.map((period, index) => (
                     <div key={period.id} className="flex items-center gap-2 bg-slate-50 p-2 rounded-lg border border-slate-100">
-                      <span className="w-12 text-center font-bold text-slate-400 text-sm">第{period.id}�?/span>
+                      <span className="w-12 text-center font-bold text-slate-400 text-sm">第{period.id}节</span>
                       <div
                         onClick={() => setActiveTimePicker({ index, type: 'start' })}
                         className="flex-1 bg-white border border-slate-200 rounded-md p-1.5 text-sm outline-none text-center cursor-pointer hover:border-primary"
@@ -412,7 +413,7 @@ export default function Settings() {
                       className="text-sm text-primary font-bold flex items-center gap-1 hover:bg-primary/10 px-3 py-1.5 rounded-lg transition-colors"
                     >
                       <span className="material-symbols-outlined text-sm">remove</span>
-                      删除最后一�?
+                      删除最后一节
                     </button>
                   )}
                 </div>
@@ -446,7 +447,7 @@ export default function Settings() {
               className="bg-white rounded-dynamic p-6 w-full max-w-sm shadow-2xl"
             >
             <h3 className="text-lg font-bold text-primary mb-2">删除课表</h3>
-            <p className="text-slate-600 mb-6">确定要删除这个课表吗？此操作不可恢复�?/p>
+            <p className="text-slate-600 mb-6">确定要删除这个课表吗？此操作不可恢复。</p>
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setShowDeleteConfirm(false)}
@@ -470,7 +471,7 @@ export default function Settings() {
       <DatePickerModal
         isOpen={isStartDatePickerOpen}
         onClose={() => setIsStartDatePickerOpen(false)}
-        title="选择开学日�?
+        title="选择开学日期"
         value={editStartDate}
         onChange={(v) => setEditStartDate(v)}
       />
@@ -487,7 +488,7 @@ export default function Settings() {
       <TimePickerModal
         isOpen={activeTimePicker !== null}
         onClose={() => setActiveTimePicker(null)}
-        title={activeTimePicker?.type === 'start' ? '选择开始时�? : '选择结束时间'}
+        title={activeTimePicker?.type === 'start' ? '选择开始时间' : '选择结束时间'}
         value={activeTimePicker ? editPeriods[activeTimePicker.index][activeTimePicker.type] : '08:00'}
         onChange={(v) => {
           if (activeTimePicker) {
@@ -555,7 +556,7 @@ export default function Settings() {
 
             <div className="p-5 rounded-2xl bg-white shadow-sm">
               <div className="flex justify-between items-center mb-6">
-                <label className="font-bold text-[16px] text-slate-800">透明�?/label>
+                <label className="font-bold text-[16px] text-slate-800">透明度</label>
                 <span className="text-primary font-bold px-3 py-1 bg-primary/10 rounded-full text-sm">{transparency}%</span>
               </div>
               <input
