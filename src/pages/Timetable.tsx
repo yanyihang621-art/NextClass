@@ -79,16 +79,16 @@ export default function Timetable() {
 
   const slideVariants = {
     enter: (direction: number) => ({
-      x: direction > 0 ? 50 : -50,
-      opacity: 0,
+      x: direction > 0 ? '100%' : '-100%',
+      opacity: 1,
     }),
     center: {
       x: 0,
       opacity: 1,
     },
     exit: (direction: number) => ({
-      x: direction < 0 ? 50 : -50,
-      opacity: 0,
+      x: direction < 0 ? '100%' : '-100%',
+      opacity: 1,
     }),
   };
 
@@ -173,7 +173,7 @@ export default function Timetable() {
       <main {...swipeHandlers} className="app-content px-2 pb-4">
 
 
-        <AnimatePresence mode="wait" custom={direction}>
+        <AnimatePresence mode="popLayout" initial={false} custom={direction}>
           <motion.div
             key={week}
             custom={direction}
@@ -181,8 +181,8 @@ export default function Timetable() {
             initial="enter"
             animate="center"
             exit="exit"
-            transition={{ duration: 0.2, ease: "easeInOut" }}
-            className="grid grid-cols-[1.875rem_repeat(7,1fr)] gap-1 md:gap-2"
+            transition={{ type: "spring", stiffness: 300, damping: 30, mass: 1 }}
+            className="grid grid-cols-[1.875rem_repeat(7,1fr)] gap-1 md:gap-2 w-full"
           >
             {/* Header Spacer */}
             <div className="flex flex-col items-center justify-end pb-1 pr-0.5" style={{ gridColumn: 1 }}>
