@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import appIcon from '../icon.jpg';
 
 type AuthMode = 'login' | 'register' | 'verify' | 'forgot-password' | 'forgot-password-verify';
 
@@ -208,9 +209,11 @@ export default function Login() {
       <div className="flex-1 flex flex-col items-center justify-center px-6 pb-8">
         {/* Logo & title */}
         <div className="text-center mb-10">
-          <div className="w-20 h-20 rounded-[22px] bg-primary flex items-center justify-center mx-auto mb-5 shadow-lg shadow-primary/25">
-            <span className="material-symbols-outlined text-white text-4xl fill">calendar_month</span>
-          </div>
+          <img
+            src={appIcon}
+            alt="NextClass Logo"
+            className="w-20 h-20 rounded-[22px] mx-auto mb-5 shadow-lg shadow-primary/15 object-cover"
+          />
           <h1 className="text-3xl font-black tracking-tight text-slate-900 mb-1">NextClass</h1>
           <p className="text-slate-400 text-sm font-medium">大学生课表与日程管理</p>
         </div>
