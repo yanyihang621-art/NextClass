@@ -1,5 +1,6 @@
 import { motion } from 'motion/react';
 import type { ReactNode } from 'react';
+import SwipeBack from './SwipeBack';
 
 interface PageTransitionProps {
   children: ReactNode;
@@ -10,6 +11,8 @@ interface PageTransitionProps {
 /**
  * Wraps a page in a slide-in-from-right / slide-out-left animation.
  * Used for non-tab pages (CourseEditor, NextClass, etc.).
+ *
+ * Also enables swipe-from-left-edge to navigate back (iOS-style).
  */
 export default function PageTransition({ children, className = '' }: PageTransitionProps) {
   return (
@@ -21,7 +24,9 @@ export default function PageTransition({ children, className = '' }: PageTransit
       className={className}
       style={{ position: 'absolute', inset: 0 }}
     >
-      {children}
+      <SwipeBack>
+        {children}
+      </SwipeBack>
     </motion.div>
   );
 }

@@ -432,8 +432,9 @@ export default function CourseEditor() {
           </div>
         )}
 
-        {timeSlots.map((slot, index) => (
-          <div key={slot.id} className="bg-white rounded-dynamic shadow-sm border border-slate-100 overflow-hidden relative">
+        <div className="max-h-[60vh] overflow-y-auto pr-1 space-y-6">
+          {timeSlots.map((slot, index) => (
+            <div key={slot.id} className="bg-white rounded-dynamic shadow-sm border border-slate-100 overflow-hidden relative">
             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-50 bg-slate-50/50">
                <span className="text-xs font-bold text-slate-500 tracking-wider">
                  {isImportMode ? ((slot as any)._courseName || `课程 ${index + 1}`) : `时间段 ${index + 1}`}
@@ -454,7 +455,7 @@ export default function CourseEditor() {
                 onClick={() => { setActiveSlotId(slot.id); setIsWeekSelectorOpen(true); }}
                 className="text-primary font-medium cursor-pointer"
               >
-                第 {slot.weeks || '1-16'} 周
+                第 {String(slot.weeks || '1-16').replace(/周/g, '')} 周
               </div>
             </div>
 
@@ -467,8 +468,16 @@ export default function CourseEditor() {
                   <div className="cursor-pointer" onClick={() => { setActiveSlotId(slot.id); setIsDayPickerOpen(true); }}>
                       {dayOptions.find(o => o.value === slot.day)?.label.replace('星期', '周') || '周一'}
                   </div>
-                  <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => { setActiveSlotId(slot.id); setIsStartPickerOpen(true); }}>
-                      第 {slot.periodStart}-{slot.periodEnd} 节
+                  <div className="flex items-center gap-1.5">
+                      <span className="text-primary font-medium">第</span>
+                      <div className="cursor-pointer underline decoration-primary/30 underline-offset-4 px-0.5" onClick={() => { setActiveSlotId(slot.id); setIsStartPickerOpen(true); }}>
+                          {slot.periodStart}
+                      </div>
+                      <span className="text-slate-400">-</span>
+                      <div className="cursor-pointer underline decoration-primary/30 underline-offset-4 px-0.5" onClick={() => { setActiveSlotId(slot.id); setIsEndPickerOpen(true); }}>
+                          {slot.periodEnd}
+                      </div>
+                      <span className="text-primary font-medium">节</span>
                   </div>
               </div>
             </div>
@@ -496,6 +505,7 @@ export default function CourseEditor() {
             </div>
           </div>
         ))}
+        </div>
 
         {!isNew && originalSlotIds.length > 0 && (
           <button
