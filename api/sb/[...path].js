@@ -25,8 +25,8 @@ export default async function handler(req, res) {
   }
 
   // 从请求路径中提取 Supabase 路径
-  // req.url 形如 /sb/auth/v1/token?grant_type=password
-  const supabasePath = req.url.replace(/^\/sb/, '');
+  // req.url 形如 /api/sb/auth/v1/token?grant_type=password
+  const supabasePath = req.url.replace(/^\/api\/sb/, '');
   const targetUrl = `${SUPABASE_URL}${supabasePath}`;
 
   try {

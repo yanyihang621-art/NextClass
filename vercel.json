@@ -1,11 +1,7 @@
 {
   "rewrites": [
     {
-      "source": "/sb/:path*",
-      "destination": "/api/sb/:path*"
-    },
-    {
-      "source": "/((?!sb/|api/).*)",
+      "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
   ]
