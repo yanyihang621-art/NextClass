@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import type { User, Session } from '@supabase/supabase-js';
 
@@ -23,6 +23,8 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  /** 当前是否处于离线状态（Supabase 不可达） */
+  isOffline: boolean;
   signUp: (email: string, password: string) => Promise<SignUpResult>;
   verifyOtp: (email: string, token: string, type?: 'signup' | 'recovery' | 'magiclink' | 'invite') => Promise<{ error: string | null }>;
   resendOtp: (email: string, type?: 'signup' | 'recovery') => Promise<{ error: string | null }>;
@@ -37,29 +39,120 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+/**
+ * 判断是否为网络级别的错误（DNS 解析失败、连接超时、fetch 本身失败等）。
+ * Supabase SDK 底层使用 fetch，当网络不可用时会抛出 TypeError / FetchError。
+ */
+function isNetworkError(err: unknown): boolean {
+  if (!err) return false;
+  const msg = String((err as any)?.message || err).toLowerCase();
+  return (
+    msg.includes('fail') && msg.includes('fetch') ||
+    msg.includes('networkerror') ||
+    msg.includes('network request failed') ||
+    msg.includes('err_name_not_resolved') ||
+    msg.includes('err_internet_disconnected') ||
+    msg.includes('err_connection') ||
+    msg.includes('load failed') ||
+    msg === 'failed to fetch'
+  );
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isOffline, setIsOffline] = useState(false);
+
+  /** 标记是否已经完成过一次初始化（避免 onAuthStateChange 重复触发时覆盖离线恢复结果） */
+  const initializedRef = useRef(false);
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    let cancelled = false;
+
+    const initSession = async () => {
+      try {
+        // Supabase SDK 的 getSession() 优先从 localStorage 读取缓存的 session，
+        // 如果存在有效 session 则直接返回，不需要网络请求。
+        // 只有 session 不存在或需要刷新 token 时才发起网络请求。
+        const { data: { session: cachedSession }, error } = await supabase.auth.getSession();
+
+        if (cancelled) return;
+
+        if (error) {
+          // 网络错误：尝试从 localStorage 恢复用户信息
+          if (isNetworkError(error)) {
+            console.warn('[AuthContext] 网络不可用，尝试从缓存恢复 session');
+            setIsOffline(true);
+            // Supabase SDK 会在 localStorage 中存放 session，
+            // getSession() 即使在离线时也会返回缓存数据。
+            // 如果 error 出现但 cachedSession 不为空，仍可使用。
+          } else {
+            console.error('[AuthContext] getSession error:', error);
+          }
+        } else {
+          setIsOffline(false);
+        }
+
+        if (cachedSession) {
+          setSession(cachedSession);
+          setUser(cachedSession.user);
+        }
+      } catch (err) {
+        if (cancelled) return;
+        if (isNetworkError(err)) {
+          console.warn('[AuthContext] 完全离线，使用缓存 session');
+          setIsOffline(true);
+          // 即使 getSession() 抛出异常，Supabase SDK 内部可能已读取到缓存
+          // 此处不清空 user/session，保持默认 null 状态
+        } else {
+          console.error('[AuthContext] Unexpected error:', err);
+        }
+      } finally {
+        if (!cancelled) {
+          initializedRef.current = true;
+          setLoading(false);
+        }
+      }
+    };
+
+    initSession();
 
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
+      (_event, newSession) => {
+        // 仅在初始化完成后响应状态变更（避免竞争条件）
+        if (!initializedRef.current) return;
+        setSession(newSession);
+        setUser(newSession?.user ?? null);
         setLoading(false);
+        // 收到 auth 事件意味着网络可用
+        if (newSession) setIsOffline(false);
       }
     );
 
-    return () => subscription.unsubscribe();
+    // 监听浏览器在线/离线事件
+    const handleOnline = () => {
+      setIsOffline(false);
+      // 网络恢复时尝试刷新 session
+      supabase.auth.getSession().then(({ data: { session: freshSession } }) => {
+        if (freshSession) {
+          setSession(freshSession);
+          setUser(freshSession.user);
+        }
+      }).catch(() => { /* 静默 */ });
+    };
+    const handleOffline = () => setIsOffline(true);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
   }, []);
 
   // ──────────────────────────────────────────────
@@ -79,26 +172,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { error: '密码长度不能少于6位' };
     }
 
-    const { error } = await supabase.auth.signUp({
-      email: email.trim().toLowerCase(),
-      password,
-    });
+    try {
+      const { error } = await supabase.auth.signUp({
+        email: email.trim().toLowerCase(),
+        password,
+      });
 
-    if (error) {
-      if (error.message.includes('already registered') || error.message.includes('already been registered')) {
-        return { error: '该邮箱已被注册' };
+      if (error) {
+        if (isNetworkError(error)) {
+          return { error: '网络连接失败，请检查网络后重试' };
+        }
+        if (error.message.includes('already registered') || error.message.includes('already been registered')) {
+          return { error: '该邮箱已被注册' };
+        }
+        if (error.message.includes('Password')) {
+          return { error: '密码不符合要求，至少需要6位' };
+        }
+        if (error.message.includes('rate limit')) {
+          return { error: '操作过于频繁，请稍后再试' };
+        }
+        return { error: error.message };
       }
-      if (error.message.includes('Password')) {
-        return { error: '密码不符合要求，至少需要6位' };
+
+      // 注册成功，需要邮箱验证
+      return { error: null, needsVerification: true };
+    } catch (err) {
+      if (isNetworkError(err)) {
+        return { error: '网络连接失败，请检查网络后重试' };
       }
-      if (error.message.includes('rate limit')) {
-        return { error: '操作过于频繁，请稍后再试' };
-      }
-      return { error: error.message };
+      throw err;
     }
-
-    // 注册成功，需要邮箱验证
-    return { error: null, needsVerification: true };
   }, []);
 
   const verifyOtp = useCallback(async (email: string, token: string, type: 'signup' | 'recovery' | 'magiclink' | 'invite' = 'signup'): Promise<{ error: string | null }> => {
@@ -106,44 +209,65 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { error: '请输入6位验证码' };
     }
 
-    const { error } = await supabase.auth.verifyOtp({
-      email: email.trim().toLowerCase(),
-      token: token.trim(),
-      type: type,
-    });
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        email: email.trim().toLowerCase(),
+        token: token.trim(),
+        type: type,
+      });
 
-    if (error) {
-      if (error.message.includes('expired') || error.message.includes('Token has expired')) {
-        return { error: '验证码已过期，请重新发送' };
+      if (error) {
+        if (isNetworkError(error)) {
+          return { error: '网络连接失败，请检查网络后重试' };
+        }
+        if (error.message.includes('expired') || error.message.includes('Token has expired')) {
+          return { error: '验证码已过期，请重新发送' };
+        }
+        if (error.message.includes('invalid') || error.message.includes('Invalid')) {
+          return { error: '验证码错误，请重新输入' };
+        }
+        return { error: error.message };
       }
-      if (error.message.includes('invalid') || error.message.includes('Invalid')) {
-        return { error: '验证码错误，请重新输入' };
+
+      return { error: null };
+    } catch (err) {
+      if (isNetworkError(err)) {
+        return { error: '网络连接失败，请检查网络后重试' };
       }
-      return { error: error.message };
+      throw err;
     }
-
-    return { error: null };
   }, []);
 
   const resendOtp = useCallback(async (email: string, type: 'signup' | 'recovery' = 'signup'): Promise<{ error: string | null }> => {
-    if (type === 'recovery') {
-      const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase());
-      if (error) return { error: error.message };
-      return { error: null };
-    }
-
-    const { error } = await supabase.auth.resend({
-      type: type as 'signup', // standard resend only supports signup/email_change
-      email: email.trim().toLowerCase(),
-    });
-
-    if (error) {
-      if (error.message.includes('rate limit')) {
-        return { error: '发送过于频繁，请稍后再试' };
+    try {
+      if (type === 'recovery') {
+        const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase());
+        if (error) {
+          if (isNetworkError(error)) return { error: '网络连接失败，请检查网络后重试' };
+          return { error: error.message };
+        }
+        return { error: null };
       }
-      return { error: error.message };
+
+      const { error } = await supabase.auth.resend({
+        type: type as 'signup', // standard resend only supports signup/email_change
+        email: email.trim().toLowerCase(),
+      });
+
+      if (error) {
+        if (isNetworkError(error)) return { error: '网络连接失败，请检查网络后重试' };
+        if (error.message.includes('rate limit')) {
+          return { error: '发送过于频繁，请稍后再试' };
+        }
+        return { error: error.message };
+      }
+      return { error: null };
+    } catch (err) {
+      if (isNetworkError(err)) {
+        return { error: '网络连接失败，请检查网络后重试' };
+      }
+      throw err;
     }
-    return { error: null };
   }, []);
 
   // ──────────────────────────────────────────────
@@ -158,22 +282,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { error: '请输入密码' };
     }
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email: email.trim().toLowerCase(),
-      password,
-    });
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password,
+      });
 
-    if (error) {
-      if (error.message.includes('Invalid login credentials')) {
-        return { error: '邮箱或密码错误' };
+      if (error) {
+        if (isNetworkError(error)) {
+          return { error: '网络连接失败，请检查网络后重试' };
+        }
+        if (error.message.includes('Invalid login credentials')) {
+          return { error: '邮箱或密码错误' };
+        }
+        if (error.message.includes('Email not confirmed')) {
+          return { error: '邮箱尚未验证，请先完成邮箱验证' };
+        }
+        return { error: error.message };
       }
-      if (error.message.includes('Email not confirmed')) {
-        return { error: '邮箱尚未验证，请先完成邮箱验证' };
+
+      setIsOffline(false);
+      return { error: null };
+    } catch (err) {
+      if (isNetworkError(err)) {
+        return { error: '网络连接失败，请检查网络后重试' };
       }
-      return { error: error.message };
+      throw err;
     }
-
-    return { error: null };
   }, []);
 
   // ──────────────────────────────────────────────
@@ -182,13 +317,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOutFn = useCallback(async () => {
     const uid = user?.id;
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      // 离线时 signOut 可能失败，但仍需清理本地状态
+      console.warn('[AuthContext] signOut 网络失败，清理本地状态:', err);
+    }
+    // 无论网络成功与否，都清除本地缓存
     if (uid) {
       localStorage.removeItem(`courses_${uid}`);
       localStorage.removeItem(`timetables_${uid}`);
     }
     localStorage.removeItem('courses');
     localStorage.removeItem('timetables');
+    setUser(null);
+    setSession(null);
   }, [user]);
 
   // ──────────────────────────────────────────────
@@ -200,18 +343,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { error: '请输入邮箱地址' };
     }
 
-    const { error } = await supabase.auth.resetPasswordForEmail(
-      email.trim().toLowerCase(),
-      { redirectTo: `${window.location.origin}/reset-password` }
-    );
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(
+        email.trim().toLowerCase(),
+        { redirectTo: `${window.location.origin}/reset-password` }
+      );
 
-    if (error) {
-      if (error.message.includes('rate limit')) {
-        return { error: '操作过于频繁，请稍后再试' };
+      if (error) {
+        if (isNetworkError(error)) {
+          return { error: '网络连接失败，请检查网络后重试' };
+        }
+        if (error.message.includes('rate limit')) {
+          return { error: '操作过于频繁，请稍后再试' };
+        }
+        return { error: error.message };
       }
-      return { error: error.message };
+      return { error: null };
+    } catch (err) {
+      if (isNetworkError(err)) {
+        return { error: '网络连接失败，请检查网络后重试' };
+      }
+      throw err;
     }
-    return { error: null };
   }, []);
 
   const updatePassword = useCallback(async (newPassword: string): Promise<{ error: string | null }> => {
@@ -219,11 +372,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { error: '新密码长度不能少于6位' };
     }
 
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
-    if (error) {
-      return { error: error.message };
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) {
+        if (isNetworkError(error)) {
+          return { error: '网络连接失败，请检查网络后重试' };
+        }
+        return { error: error.message };
+      }
+      return { error: null };
+    } catch (err) {
+      if (isNetworkError(err)) {
+        return { error: '网络连接失败，请检查网络后重试' };
+      }
+      throw err;
     }
-    return { error: null };
   }, []);
 
   // ──────────────────────────────────────────────
@@ -235,18 +398,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { error: '请输入邮箱地址' };
     }
 
-    const { error } = await supabase.auth.signInWithOtp({
-      email: email.trim().toLowerCase(),
-      options: { shouldCreateUser: false },
-    });
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email: email.trim().toLowerCase(),
+        options: { shouldCreateUser: false },
+      });
 
-    if (error) {
-      if (error.message.includes('rate limit')) {
-        return { error: '操作过于频繁，请稍后再试' };
+      if (error) {
+        if (isNetworkError(error)) return { error: '网络连接失败，请检查网络后重试' };
+        if (error.message.includes('rate limit')) {
+          return { error: '操作过于频繁，请稍后再试' };
+        }
+        return { error: error.message };
       }
-      return { error: error.message };
+      return { error: null };
+    } catch (err) {
+      if (isNetworkError(err)) {
+        return { error: '网络连接失败，请检查网络后重试' };
+      }
+      throw err;
     }
-    return { error: null };
   }, []);
 
   const verifyEmailOtp = useCallback(async (email: string, token: string): Promise<{ error: string | null }> => {
@@ -254,23 +425,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { error: '请输入6位验证码' };
     }
 
-    const { error } = await supabase.auth.verifyOtp({
-      email: email.trim().toLowerCase(),
-      token: token.trim(),
-      type: 'email',
-    });
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        email: email.trim().toLowerCase(),
+        token: token.trim(),
+        type: 'email',
+      });
 
-    if (error) {
-      if (error.message.includes('expired') || error.message.includes('Token has expired')) {
-        return { error: '验证码已过期，请重新发送' };
+      if (error) {
+        if (isNetworkError(error)) return { error: '网络连接失败，请检查网络后重试' };
+        if (error.message.includes('expired') || error.message.includes('Token has expired')) {
+          return { error: '验证码已过期，请重新发送' };
+        }
+        if (error.message.includes('invalid') || error.message.includes('Invalid')) {
+          return { error: '验证码错误，请重新输入' };
+        }
+        return { error: error.message };
       }
-      if (error.message.includes('invalid') || error.message.includes('Invalid')) {
-        return { error: '验证码错误，请重新输入' };
+
+      return { error: null };
+    } catch (err) {
+      if (isNetworkError(err)) {
+        return { error: '网络连接失败，请检查网络后重试' };
       }
-      return { error: error.message };
+      throw err;
     }
-
-    return { error: null };
   }, []);
 
   // ──────────────────────────────────────────────
@@ -286,6 +465,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user,
       session,
       loading,
+      isOffline,
       signUp,
       verifyOtp,
       resendOtp,

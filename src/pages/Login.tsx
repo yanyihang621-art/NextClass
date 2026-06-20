@@ -6,7 +6,7 @@ type AuthMode = 'login' | 'register' | 'verify' | 'forgot-password' | 'forgot-pa
 
 export default function Login() {
   const navigate = useNavigate();
-  const { signIn, signUp, verifyOtp, resendOtp, resetPassword } = useAuth();
+  const { signIn, signUp, verifyOtp, resendOtp, resetPassword, isOffline } = useAuth();
 
   const [mode, setMode] = useState<AuthMode>('login');
   const [email, setEmail] = useState('');
@@ -59,7 +59,7 @@ export default function Login() {
         navigate('/timetable', { replace: true });
       }
     } catch {
-      setError('网络错误，请稍后重试');
+      setError('无法连接到服务器，请检查网络连接');
     } finally {
       setSubmitting(false);
     }
@@ -87,7 +87,7 @@ export default function Login() {
         startCooldown();
       }
     } catch {
-      setError('网络错误，请稍后重试');
+      setError('无法连接到服务器，请检查网络连接');
     } finally {
       setSubmitting(false);
     }
@@ -107,7 +107,7 @@ export default function Login() {
         navigate('/timetable', { replace: true });
       }
     } catch {
-      setError('网络错误，请稍后重试');
+      setError('无法连接到服务器，请检查网络连接');
     } finally {
       setSubmitting(false);
     }
@@ -150,7 +150,7 @@ export default function Login() {
         startCooldown();
       }
     } catch {
-      setError('网络错误，请稍后重试');
+      setError('无法连接到服务器，请检查网络连接');
     } finally {
       setSubmitting(false);
     }
@@ -172,7 +172,7 @@ export default function Login() {
         navigate('/reset-password', { replace: true });
       }
     } catch {
-      setError('网络错误，请稍后重试');
+      setError('无法连接到服务器，请检查网络连接');
     } finally {
       setSubmitting(false);
     }
@@ -198,6 +198,13 @@ export default function Login() {
 
   return (
     <div className="min-h-screen bg-[#F7F7F9] font-body flex flex-col">
+      {/* 离线提示 */}
+      {isOffline && (
+        <div className="bg-amber-500 text-white text-xs text-center py-2 font-medium shadow-sm" style={{ paddingTop: 'max(env(safe-area-inset-top), 0.5rem)' }}>
+          📡 当前无网络连接 · 登录需要网络支持
+        </div>
+      )}
+
       {/* Decorative background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none -z-10">
         <div className="absolute -top-[20%] -left-[15%] w-[70%] h-[50%] bg-primary/5 rounded-full blur-[100px]"></div>
