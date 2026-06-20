@@ -11,7 +11,7 @@ import { createClient } from '@supabase/supabase-js';
  */
 
 const SUPABASE_DIRECT_URL = import.meta.env.VITE_SUPABASE_URL;  // https://xxx.supabase.co
-const SUPABASE_PROXY_URL = 'https://nextclass.top/api/sb';           // 反代路径
+const SUPABASE_PROXY_URL = 'https://nextclass.top/sb';           // 反代路径
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!SUPABASE_DIRECT_URL || !supabaseAnonKey) {
