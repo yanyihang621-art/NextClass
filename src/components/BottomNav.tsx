@@ -1,10 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { clsx } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-export function cn(...inputs: (string | undefined | null | false)[]) {
-  return twMerge(clsx(inputs));
-}
+import { cn } from '../shared/lib/utils';
 
 export default function BottomNav() {
   const location = useLocation();

@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { cn } from './BottomNav';
+import { cn } from '../shared/lib/utils';
 
 interface WheelPickerProps {
   options: { label: string; value: string | number }[];

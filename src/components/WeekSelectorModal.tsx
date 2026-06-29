@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { cn } from './BottomNav';
+import { cn } from '../shared/lib/utils';
 
 interface WeekSelectorModalProps {
   isOpen: boolean;

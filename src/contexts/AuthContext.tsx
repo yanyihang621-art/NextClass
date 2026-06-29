@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
+import { isNetworkError } from '../shared/lib/network';
 import type { User, Session } from '@supabase/supabase-js';
 
 /**
@@ -38,25 +39,6 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-/**
- * 判断是否为网络级别的错误（DNS 解析失败、连接超时、fetch 本身失败等）。
- * Supabase SDK 底层使用 fetch，当网络不可用时会抛出 TypeError / FetchError。
- */
-function isNetworkError(err: unknown): boolean {
-  if (!err) return false;
-  const msg = String((err as any)?.message || err).toLowerCase();
-  return (
-    msg.includes('fail') && msg.includes('fetch') ||
-    msg.includes('networkerror') ||
-    msg.includes('network request failed') ||
-    msg.includes('err_name_not_resolved') ||
-    msg.includes('err_internet_disconnected') ||
-    msg.includes('err_connection') ||
-    msg.includes('load failed') ||
-    msg === 'failed to fetch'
-  );
-}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -173,7 +155,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email: email.trim().toLowerCase(),
         password,
       });
@@ -192,6 +174,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return { error: '操作过于频繁，请稍后再试' };
         }
         return { error: error.message };
+      }
+
+      // 若启用 User Enumeration Protection，已注册的用户不会返回错误，但其 identities 数组为空
+      if (data?.user && (!data.user.identities || data.user.identities.length === 0)) {
+        return { error: '该邮箱已被注册' };
       }
 
       // 注册成功，需要邮箱验证

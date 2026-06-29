@@ -3,14 +3,14 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { useSwipeable } from 'react-swipeable';
 import BottomNav from '../components/BottomNav';
-import { useSettings } from '../contexts/SettingsContext';
+import { useTimetable } from '../contexts/TimetableContext';
 import { useCourses } from '../contexts/CourseContext';
 import { getBeijingTime, calculateCurrentWeek, isCourseInWeek } from '../lib/timeUtils';
 
 export default function Timetable() {
   const navigate = useNavigate();
   const { courses } = useCourses();
-  const { activeTimetable } = useSettings();
+  const { activeTimetable } = useTimetable();
 
   const [currentDate, setCurrentDate] = useState(getBeijingTime());
   const { semesterStart, currentWeek: initialWeek } = useMemo(() =>
@@ -149,7 +149,7 @@ export default function Timetable() {
               <button onClick={handlePrevWeek} className="p-1 hover:bg-slate-100 rounded-full transition-colors active:scale-90">
                 <span className="material-symbols-outlined text-base">chevron_left</span>
               </button>
-              <span className="font-black tracking-tight text-slate-900 text-base w-[3.5rem] text-center">第 {week} 周</span>
+              <span className="font-black tracking-tight text-slate-900 text-base w-[4.5rem] text-center whitespace-nowrap">第{week}周</span>
               <button onClick={handleNextWeek} className="p-1 hover:bg-slate-100 rounded-full transition-colors active:scale-90">
                 <span className="material-symbols-outlined text-base">chevron_right</span>
               </button>

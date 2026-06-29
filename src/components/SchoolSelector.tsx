@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useMemo, useCallback, useEffect } from 'react';
 import { SCHOOLS, getRecentSchools, saveRecentSchool, type School } from '../data/schools';
 
 interface SchoolSelectorProps {
@@ -87,7 +87,7 @@ export default function SchoolSelector({ onSelect, onBack }: SchoolSelectorProps
     );
 
     Object.values(sectionRefs.current).forEach(el => {
-      if (el) observer.observe(el);
+      if (el instanceof Element) observer.observe(el);
     });
 
     return () => observer.disconnect();

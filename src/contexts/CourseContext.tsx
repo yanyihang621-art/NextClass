@@ -1,20 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
+import { courseRepository } from '../shared/services/courseRepository';
+import { COURSE_COLORS } from '../shared/constants/colors';
+import type { Course } from '../shared/types/course';
 
-export interface Course {
-  id: string;
-  timetableId?: string;
-  name: string;
-  teacher: string;
-  location: string;
-  weeks: string;
-  day: number;
-  periodStart: number;
-  periodEnd: number;
-  color: string;
-  bg: string;
-}
+// Re-export Course type for backward compatibility
+export type { Course } from '../shared/types/course';
 
 interface CourseContextType {
   courses: Course[];
@@ -26,12 +17,6 @@ interface CourseContextType {
 }
 
 const CourseContext = createContext<CourseContextType | undefined>(undefined);
-
-const COURSE_COLORS = [
-  '#6d23f9', '#2196F3', '#4CAF50', '#FF9800', '#E91E63', 
-  '#00BCD4', '#8BC34A', '#FFC107', '#F44336', '#3F51B5', 
-  '#009688', '#9C27B0'
-];
 
 function getAutoColor(newCourse: Course, existingCourses: Course[], currentColor?: string): string {
   const sameDayCourses = existingCourses.filter(c => c.day === newCourse.day && c.id !== newCourse.id && (c.timetableId || '1') === (newCourse.timetableId || '1'));
@@ -66,40 +51,6 @@ function getAutoColor(newCourse: Course, existingCourses: Course[], currentColor
   }
 
   return availableColors[Math.floor(Math.random() * availableColors.length)];
-}
-
-// Helper: convert DB row to Course object
-function dbRowToCourse(row: any): Course {
-  return {
-    id: row.id,
-    timetableId: row.timetable_id || undefined,
-    name: row.name,
-    teacher: row.teacher || '',
-    location: row.location || '',
-    weeks: row.weeks || '',
-    day: row.day,
-    periodStart: row.period_start,
-    periodEnd: row.period_end,
-    color: row.color || '',
-    bg: row.bg || '',
-  };
-}
-
-// Helper: convert Course object to DB row
-function courseToDbRow(course: Course) {
-  return {
-    id: course.id,
-    timetable_id: course.timetableId || null,
-    name: course.name,
-    teacher: course.teacher,
-    location: course.location,
-    weeks: course.weeks,
-    day: course.day,
-    period_start: course.periodStart,
-    period_end: course.periodEnd,
-    color: course.color,
-    bg: course.bg,
-  };
 }
 
 export const CourseProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -169,24 +120,18 @@ export const CourseProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const fetchCourses = async () => {
       setLoading(true);
       try {
-        const { data, error } = await supabase
-          .from('courses')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('day')
-          .order('period_start');
+        const { data, error } = await courseRepository.fetchByUser(user.id);
 
         if (error) {
-          console.error('Failed to fetch courses from Supabase:', error);
+          console.error('Failed to fetch courses:', error);
           // 网络失败时保持 localStorage 缓存的数据，不清空
         } else if (data) {
           // ★ 关键保护：如果本地有未同步的变更，不用云端数据覆盖本地
           if (dirtyRef.current) {
             console.info('[CourseContext] 本地有未同步的变更，跳过云端数据覆盖');
           } else {
-            const parsed = data.map(dbRowToCourse);
-            setCourses(parsed);
-            localStorage.setItem(cacheKey, JSON.stringify(parsed));
+            setCourses(data);
+            localStorage.setItem(cacheKey, JSON.stringify(data));
           }
         }
       } catch (e) {
@@ -206,8 +151,8 @@ export const CourseProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       // Async persist to Supabase（标脏 → 写入 → 同步完成后解除脏标记）
       if (user) {
         markDirty();
-        supabase.from('courses').insert({ ...courseToDbRow(newCourse), user_id: user.id }).then(({ error }) => {
-          if (error) console.error('Failed to add course to Supabase:', error);
+        courseRepository.create(user.id, newCourse).then(({ error }) => {
+          if (error) console.error('Failed to add course:', error);
           markSynced();
         });
       }
@@ -227,8 +172,8 @@ export const CourseProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       // Async persist to Supabase
       if (user) {
         markDirty();
-        supabase.from('courses').update({ ...courseToDbRow(updatedCourse), user_id: user.id }).eq('id', id).then(({ error }) => {
-          if (error) console.error('Failed to update course in Supabase:', error);
+        courseRepository.update(user.id, id, updatedCourse).then(({ error }) => {
+          if (error) console.error('Failed to update course:', error);
           markSynced();
         });
       }
@@ -244,8 +189,8 @@ export const CourseProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       // Async persist to Supabase
       if (user) {
         markDirty();
-        supabase.from('courses').delete().eq('id', id).then(({ error }) => {
-          if (error) console.error('Failed to delete course from Supabase:', error);
+        courseRepository.delete(id).then(({ error }) => {
+          if (error) console.error('Failed to delete course:', error);
           markSynced();
         });
       }
@@ -261,8 +206,8 @@ export const CourseProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       // Async persist to Supabase
       if (user) {
         markDirty();
-        supabase.from('courses').delete().eq('timetable_id', timetableId).then(({ error }) => {
-          if (error) console.error('Failed to delete courses by timetable from Supabase:', error);
+        courseRepository.deleteByTimetable(timetableId).then(({ error }) => {
+          if (error) console.error('Failed to delete courses by timetable:', error);
           markSynced();
         });
       }

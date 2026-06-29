@@ -1,0 +1,33 @@
+name: Sync Changelog to Supabase Database
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Checkout the app repo (NextClass)
+      - name: Checkout App Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # 2. Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # 3. Run the sync script
+      # Note: You must add 'SUPABASE_SERVICE_ROLE_KEY' to your repository secrets on GitHub.
+      # You can find the service role key in your Supabase Dashboard -> Settings -> API.
+      - name: Run Sync Script
+        env:
+          GITHUB_EVENT_PATH: ${{ github.event_path }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          node scripts/sync-changelog.js

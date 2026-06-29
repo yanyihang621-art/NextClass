@@ -7,10 +7,12 @@ import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'motion/react';
 import { AuthProvider } from './contexts/AuthContext';
+import { PreferencesProvider } from './contexts/PreferencesContext';
+import { TimetableProvider } from './contexts/TimetableContext';
+import { CourseProvider } from './contexts/CourseContext';
+import ErrorBoundary from './shared/components/ErrorBoundary';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
-import { SettingsProvider } from './contexts/SettingsContext';
-import { CourseProvider } from './contexts/CourseContext';
 import Agenda from './pages/Agenda';
 import Timetable from './pages/Timetable';
 import Import from './pages/Import';
@@ -33,7 +35,7 @@ function AnimatedRoutes() {
 
   return (
     <AnimatePresence mode="wait">
-      {/* @ts-expect-error - key is required by AnimatePresence to trigger page transition animations */}
+      {/* key is required by AnimatePresence to trigger page transition animations */}
       <Routes location={location} key={location.pathname}>
         {/* Auth pages */}
         <Route path="/login" element={<Login />} />
@@ -84,15 +86,20 @@ export default function App() {
   }, []);
 
   return (
-    <AuthProvider>
-      <SettingsProvider>
-        <CourseProvider>
-          <BrowserRouter>
-            <ScrollToTop />
-            <AnimatedRoutes />
-          </BrowserRouter>
-        </CourseProvider>
-      </SettingsProvider>
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <PreferencesProvider>
+          <TimetableProvider>
+            <CourseProvider>
+              <BrowserRouter>
+                <ScrollToTop />
+                <AnimatedRoutes />
+              </BrowserRouter>
+            </CourseProvider>
+          </TimetableProvider>
+        </PreferencesProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
+

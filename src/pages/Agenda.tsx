@@ -2,13 +2,13 @@ import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import BottomNav from '../components/BottomNav';
 import { useCourses } from '../contexts/CourseContext';
-import { useSettings } from '../contexts/SettingsContext';
+import { useTimetable } from '../contexts/TimetableContext';
 import { getBeijingTime, calculateCurrentWeek, isCourseInWeek } from '../lib/timeUtils';
 
 export default function Agenda() {
   const navigate = useNavigate();
   const { courses } = useCourses();
-  const { activeTimetable } = useSettings();
+  const { activeTimetable } = useTimetable();
   const [currentDate, setCurrentDate] = useState(getBeijingTime());
 
   useEffect(() => {
