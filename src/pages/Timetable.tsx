@@ -181,7 +181,7 @@ export default function Timetable() {
             initial="enter"
             animate="center"
             exit="exit"
-            transition={{ type: "spring", stiffness: 300, damping: 30, mass: 1 }}
+            transition={{ type: "tween", ease: "easeOut", duration: 0.25 }}
             className="grid grid-cols-[1.875rem_repeat(7,1fr)] gap-1 md:gap-2 w-full"
           >
             {/* Header Spacer */}
