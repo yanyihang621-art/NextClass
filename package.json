@@ -7,6 +7,7 @@
     "dev": "vite --port=3000 --host=0.0.0.0",
     "build": "vite build",
     "preview": "vite preview",
+    "verify:startup-cache": "node scripts/verify-startup-cache.mjs",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
     "android": "powershell -Command \"$env:JAVA_HOME='D:\\\\JDK-21'; $env:ANDROID_HOME='D:\\\\AndroidStudioSDK'; npx cap run android\""

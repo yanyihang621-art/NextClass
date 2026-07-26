@@ -1,6 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { isNetworkError } from '../shared/lib/network';
+import {
+  clearCachedAuthUser,
+  createInitialAuthState,
+  writeCachedAuthUser,
+} from '../shared/lib/authCache';
 import type { User, Session } from '@supabase/supabase-js';
 
 /**
@@ -41,10 +46,13 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  // 同步恢复上次登录用户，让其 user.id 在首个 React render 前即可用于
+  // CourseContext/TimetableContext 读取用户级 localStorage 缓存。
+  const [initialAuthState] = useState(createInitialAuthState);
+  const [user, setUser] = useState<User | null>(initialAuthState.user);
   const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [isOffline, setIsOffline] = useState(false);
+  const [loading, setLoading] = useState(initialAuthState.loading);
+  const [isOffline, setIsOffline] = useState(() => typeof navigator !== 'undefined' && !navigator.onLine);
 
   /** 标记是否已经完成过一次初始化（避免 onAuthStateChange 重复触发时覆盖离线恢复结果） */
   const initializedRef = useRef(false);
@@ -71,6 +79,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // 如果 error 出现但 cachedSession 不为空，仍可使用。
           } else {
             console.error('[AuthContext] getSession error:', error);
+            setSession(null);
+            setUser(null);
+            clearCachedAuthUser();
           }
         } else {
           setIsOffline(false);
@@ -79,6 +90,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (cachedSession) {
           setSession(cachedSession);
           setUser(cachedSession.user);
+          writeCachedAuthUser(cachedSession.user);
+        } else if (!error) {
+          // 在线且 Supabase 明确确认没有 session，移除可能过期的启动缓存。
+          setSession(null);
+          setUser(null);
+          clearCachedAuthUser();
         }
       } catch (err) {
         if (cancelled) return;
@@ -89,6 +106,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // 此处不清空 user/session，保持默认 null 状态
         } else {
           console.error('[AuthContext] Unexpected error:', err);
+          setSession(null);
+          setUser(null);
+          clearCachedAuthUser();
         }
       } finally {
         if (!cancelled) {
@@ -107,6 +127,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!initializedRef.current) return;
         setSession(newSession);
         setUser(newSession?.user ?? null);
+        if (newSession) {
+          writeCachedAuthUser(newSession.user);
+        } else {
+          clearCachedAuthUser();
+        }
         setLoading(false);
         // 收到 auth 事件意味着网络可用
         if (newSession) setIsOffline(false);
@@ -121,6 +146,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (freshSession) {
           setSession(freshSession);
           setUser(freshSession.user);
+          writeCachedAuthUser(freshSession.user);
+        } else {
+          setSession(null);
+          setUser(null);
+          clearCachedAuthUser();
         }
       }).catch(() => { /* 静默 */ });
     };
@@ -317,6 +347,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     localStorage.removeItem('courses');
     localStorage.removeItem('timetables');
+    clearCachedAuthUser();
     setUser(null);
     setSession(null);
   }, [user]);
