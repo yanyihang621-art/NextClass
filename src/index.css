@@ -25,8 +25,8 @@
   --color-surface-container-high: #e8e8e8;
   --color-surface-container-highest: #e2e2e2;
   
-  --font-headline: "Plus Jakarta Sans", "Noto Sans SC", sans-serif;
-  --font-body: "Plus Jakarta Sans", "Noto Sans SC", sans-serif;
+  --font-headline: "PingFang SC", "PingFang TC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --font-body: "PingFang SC", "PingFang TC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
 }
 
 html {

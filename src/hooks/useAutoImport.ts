@@ -193,7 +193,7 @@ const FAB_INJECT_SCRIPT = `
       color: white;
       font-weight: 700;
       font-size: 14px;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-family: "PingFang SC", "PingFang TC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
       border: none;
       border-radius: 50px;
       padding: 14px 22px;
