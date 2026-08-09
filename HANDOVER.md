@@ -1,5 +1,8 @@
 # NextClass 项目 AI 开发交接文档 (Handover Documentation)
 
+> [!WARNING]
+> 本文件是历史快照，不是当前架构入口。新任务必须先读 `AGENTS.md`、`CONTEXT.md` 和 `README.md`；当本文件与当前源码、配置或 README 冲突时，以当前源码/配置为准。尤其不要继续采用这里已经过时的 AI Studio、`SettingsContext`、重连同步和已完成发布陈述。
+
 本文档旨在为后续接手的 AI Agent 或开发人员提供项目全貌、技术架构、常用构建命令、核心业务逻辑以及最新修改记录的详细说明。
 
 ---

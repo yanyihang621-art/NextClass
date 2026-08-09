@@ -1,0 +1,107 @@
+{
+  "version": "2.0.0",
+  "options": {
+    "cwd": "${workspaceFolder}",
+    "env": {
+      "JAVA_HOME": "D:\\JDK-21",
+      "ANDROID_HOME": "D:\\AndroidStudioSDK",
+      "ANDROID_SDK_ROOT": "D:\\AndroidStudioSDK",
+      "PATH": "D:\\JDK-21\\bin;D:\\AndroidStudioSDK\\platform-tools;D:\\AndroidStudioSDK\\emulator;${env:PATH}"
+    }
+  },
+  "tasks": [
+    {
+      "label": "NextClass: Start Vite for Android Live Reload",
+      "type": "shell",
+      "command": "npm",
+      "args": [
+        "run",
+        "dev"
+      ],
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "vite",
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".*",
+          "endsPattern": ".*(Local:\\s+http://localhost:3000/|ready in).*"
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "nextclass-live-reload"
+      }
+    },
+    {
+      "label": "NextClass: Run Android (Live Reload)",
+      "type": "shell",
+      "command": "npx",
+      "args": [
+        "cap",
+        "run",
+        "android",
+        "--live-reload",
+        "--host",
+        "localhost",
+        "--port",
+        "3000",
+        "--forwardPorts",
+        "3000:3000"
+      ],
+      "dependsOn": "NextClass: Start Vite for Android Live Reload",
+      "dependsOrder": "sequence",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "nextclass-live-reload"
+      }
+    },
+    {
+      "label": "NextClass: Build web assets",
+      "type": "shell",
+      "command": "npm",
+      "args": [
+        "run",
+        "build"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "NextClass: Run Android (static build)",
+      "type": "shell",
+      "command": "npx",
+      "args": [
+        "cap",
+        "run",
+        "android"
+      ],
+      "dependsOn": "NextClass: Build web assets",
+      "dependsOrder": "sequence",
+      "problemMatcher": []
+    },
+    {
+      "label": "NextClass: Sync Android",
+      "type": "shell",
+      "command": "npx",
+      "args": [
+        "cap",
+        "sync",
+        "android"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "NextClass: List Android targets",
+      "type": "shell",
+      "command": "npx",
+      "args": [
+        "cap",
+        "run",
+        "android",
+        "--list"
+      ],
+      "problemMatcher": []
+    }
+  ]
+}

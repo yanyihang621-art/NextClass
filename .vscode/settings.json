@@ -1,0 +1,15 @@
+{
+  "caspian.androidSdkPath": "D:\\AndroidStudioSDK",
+  "caspian.autoSelectDevice": true,
+  "caspian.deviceTracker.interval": 3,
+  "caspian.emulator.coldBoot": false,
+  "webnative.defaultPort": 3000,
+  "webnative.androidDebugWebRoot": "workspace",
+  "webnative.openPreviewLocation": "side",
+  "tailwindCSS.classFunctions": [
+    "cn"
+  ],
+  "editor.quickSuggestions": {
+    "strings": "on"
+  }
+}

@@ -13,7 +13,7 @@
     "android": "powershell -Command \"$env:JAVA_HOME='D:\\\\JDK-21'; $env:ANDROID_HOME='D:\\\\AndroidStudioSDK'; npx cap run android\""
   },
   "dependencies": {
-    "@capacitor/android": "^8.3.0",
+    "@capacitor/android": "^8.3.1",
     "@capacitor/cli": "^8.3.1",
     "@capacitor/core": "^8.3.1",
     "@capacitor/status-bar": "^8.0.2",
