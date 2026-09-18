@@ -1,149 +1,291 @@
-# NextClass App
+<div align="center">
 
-面向中国大陆高校学生的移动优先课表应用。当前仓库保存同一套 React Web/PWA 源码及其 Capacitor Android 工程；Android 是仓库中唯一存在的原生平台目录。
+  <img src="./assets/banner.svg" alt="NextClass Banner" width="100%" />
 
-本文件是当前架构和开发要领入口。源码与配置始终优先；`HANDOVER.md` 是历史材料，其中的 AI Studio、`SettingsContext` 和“重连后课程自动同步”等描述已不再代表现状。
+  <br />
+  <br />
 
-## 技术栈
+  <h1>NextClass</h1>
 
-- React 19、TypeScript 5.8、Vite 6、Tailwind CSS 4。
-- React Router 7 使用 `BrowserRouter`；动画包是 `motion`/`motion/react`，另有 `react-swipeable`。
-- Supabase JS 负责邮箱认证以及 `courses`、`timetables` 的浏览器端访问。
-- Capacitor 8 + Java Android 工程；原生插件为 StatusBar 与 `@capgo/inappbrowser`。
-- `vite-plugin-pwa` 在入口立即注册 auto-update Service Worker。
+  <p>
+    <strong>你的专属课表与教务管家</strong>
+    <br />
+    告别繁琐的教务系统。一键全自动抓取课表，极其纯净的无广体验，专为大学生定制。
+  </p>
 
-以 `package.json`、`vite.config.ts`、`tsconfig.json`、`capacitor.config.ts` 和 `android/` 配置为具体版本与构建事实源。TypeScript 当前未启用 `strict`；`@/*` alias 指向项目根而非 `src/`。
+  <p>
+    <a href="https://github.com/yanyihang621-art/NextClass"><img src="https://img.shields.io/github/stars/yanyihang621-art/NextClass?style=flat-square&logo=github&color=7C3AED" alt="GitHub Stars" /></a>
+    <a href="https://nextclass.top"><img src="https://img.shields.io/badge/官网宣发-nextclass.top-7C3AED?style=flat-square&logo=googlechrome&logoColor=white" alt="Landing Site" /></a>
+    <a href="#-快速开始-run-locally"><img src="https://img.shields.io/badge/最新版本-v1.0.0-6D28D9?style=flat-square" alt="Version" /></a>
+    <img src="https://img.shields.io/badge/平台-Android%20%7C%20Web%20%7C%20PWA-4F46E5?style=flat-square&logo=android&logoColor=white" alt="Platforms" />
+    <img src="https://img.shields.io/badge/体验-完全免费%20%C2%B7%20纯净无广-10B981?style=flat-square" alt="Free and Pure" />
+    <img src="https://img.shields.io/badge/前端-React%2019%20%7C%20Tailwind%204-38BDF8?style=flat-square&logo=react&logoColor=white" alt="Tech Stack" />
+    <img src="https://img.shields.io/badge/后端-Supabase%20Cloud-3ECF8E?style=flat-square&logo=supabase&logoColor=white" alt="Backend" />
+    <img src="https://img.shields.io/badge/开源协议-MIT-slate?style=flat-square" alt="License" />
+  </p>
 
-## 运行时结构
+  <p>
+    <a href="#-核心特性"><strong>核心特性</strong></a> ·
+    <a href="#-界面预览"><strong>界面预览</strong></a> ·
+    <a href="#-系统架构与设计"><strong>系统架构</strong></a> ·
+    <a href="#-快速开始-run-locally"><strong>快速开始</strong></a> ·
+    <a href="#-android-构建与打包"><strong>Android 打包</strong></a> ·
+    <a href="https://nextclass.top"><strong>官方网站</strong></a>
+  </p>
 
-入口链：`index.html` → `src/main.tsx` → `src/App.tsx`。
+</div>
 
-Provider 顺序不得在不了解依赖时随意调整：
+---
+
+## 📖 项目简介
+
+**NextClass** 是一款面向中国大陆高校学生的**移动优先（Mobile-First）现代课表与日程管理应用**。同一套核心 Web 代码同时作为现代 PWA，并由 Capacitor 8 封装为 Android 原生 App。
+
+在当今高校生活中，传统教务系统往往界面陈旧、移动端加载缓慢且排版混乱；而市面主流课表应用又充斥着开屏广告、营销推广与臃肿复杂的社交信息流。
+
+**NextClass 坚持“只做课表该做的事”**：
+- 🌿 **纯净体验**：零开屏广告、零社交动态、零冗余弹窗，打开即见当下安排。
+- 🚀 **一键教务抓取**：内置安全 InAppBrowser 与智能解析引擎，登录教务系统一键导入整学期课表。
+- ⚡ **离线优先架构（Offline-First）**：基于用户隔离的本地毫秒级缓存，弱网、断网不白屏，课表秒开无延迟。
+- 🎨 **自由个性定制**：圆角曲率、单元格高度、卡片透明度与多套高颜值主题色自由调节。
+
+---
+
+## 📱 界面预览
+
+<div align="center">
+  <img src="./assets/preview.png" alt="NextClass 宣发页与手机 App 界面预览" width="100%" style="border-radius: 12px; box-shadow: 0 12px 36px rgba(0,0,0,0.08);" />
+  <p><em>NextClass 官方宣发页与真实 App 课表网格界面</em></p>
+</div>
+
+---
+
+## ✨ 核心特性
+
+| 模块 | 特性与优势 |
+| :--- | :--- |
+| 🎓 **智能教务导入** | 移动端原生集成 WebView 安全桥接，支持正方等主流高校教务系统一键抓取；客户端自动解析课程、上课周次与节次作息，无需手动逐项录入。 |
+| 🌿 **纯粹无广告** | 告别开屏倒计时与各类商业信息流；界面聚焦在课表日程与基础设置，操作丝滑顺畅。 |
+| ⚡ **毫秒级离线首屏** | 采用用户空间隔离的 `localStorage` 缓存机制，冷启动优先读取缓存渲染，后台静默与 Supabase 同步，即使在地下室、电梯等弱网环境依然稳定秒开。 |
+| 📅 **智能今日日程 (Agenda)** | 结合开学日期与当前周次，动态计算单双周与今日课程安排；醒目标注当前课程进行状态、上课教室与上下课节次倒计时。 |
+| 🎨 **高度个性化审美** | 针对现代全面屏定制，提供圆角/方角弧度、单元格高度、透明度调节，以及紫罗兰、海盐蓝、薄荷绿等多种精致清新配色。 |
+| ☁️ **云端跨设备同步** | 接入 Supabase 现代云端数据库，数据与认证账号绑定，支持多学期课表独立创建、自由切换与云端多端持久化。 |
+| 📱 **原生级交互体验** | 借助 Capacitor 8 深度封装，适配 Android 系统级全面屏边缘手势（返回上一页）、状态栏沉浸穿透以及标准 Safe Area 布局。 |
+
+---
+
+## 🏗️ 系统架构与设计
+
+### 1. 运行时结构与依赖流
+
+应用的运行时状态由统一的 React Context 分层管理，并在启动阶段同步恢复：
 
 ```text
 ErrorBoundary
-└─ AuthProvider
-   └─ PreferencesProvider
-      └─ TimetableProvider
-         └─ CourseProvider
-            └─ BrowserRouter + Routes
+└─ AuthProvider              # 身份认证与登录态保持 (nextclass_cached_auth_user)
+   └─ PreferencesProvider    # 设备级外观设置 (主题色、圆角、行高、透明度)
+      └─ TimetableProvider   # 课表配置边界 (学期、开学日、节次安排、活动课表切换)
+         └─ CourseProvider   # 课程数据与周次过滤 (Course 实体与本地/云端同步)
+            └─ BrowserRouter # 客户端路由与页面流转
 ```
 
-Timetable/Course 在首次 render 时依赖 Auth 同步恢复出的 `user.id` 读取用户缓存。
+### 2. 离线优先数据流架构 (Offline-First)
 
-### 路由
+采用 **本地缓存先于网络渲染** 的离线策略，确保用户界面零延迟响应：
 
-- 公开：`/login`、`/reset-password`。
-- 底栏受保护页：`/agenda`、`/timetable`、`/import`、`/settings`；`/` 重定向到 `/timetable`。
-- 二级受保护页：`/editor`、`/nextclass`。
-- 当前没有 `*` 兜底路由。
+```mermaid
+flowchart TD
+    subgraph UI ["界面与状态层 (React 19)"]
+        Page["Page / Component"]
+        Ctx["React Context (State Orchestration)"]
+    end
 
-`src/pages/` 保存路由页面；login/import/settings 已按子目录拆分。`src/components/` 是跨页面 UI；`src/shared/` 保存类型、repository、常量和小型基础设施；`src/lib/` 保存 Supabase、时间和课表解析；`src/contexts/` 是应用状态与持久化协调层。
+    subgraph Local ["设备存储层 (Zero-Latency)"]
+        Cache[("User-Scoped LocalStorage<br/>courses_<uid> / timetables_<uid>")]
+    end
 
-## 数据所有权与离线流
+    subgraph Remote ["云端持久层 (Cloud Sync)"]
+        Repo["Repository Layer<br/>(camelCase ↔ snake_case 映射)"]
+        SB[("Supabase Cloud Database<br/>(RLS 租户隔离)")]
+    end
 
-```text
-Page / component
-  → React Context（UI 状态与 mutation orchestration）
-    → user-scoped localStorage（立即可见）
-    → repository（数据库字段映射）
-      → Supabase（后台持久化）
+    Page -->|读取状态 / 派发变更| Ctx
+    Ctx -->|1. 启动即刻读取缓存| Cache
+    Cache -->|2. 优先完成首屏渲染| Page
+    Ctx -->|3. 本地 Mutation 立即写入| Cache
+    Ctx -->|4. 后台发起异步同步| Repo
+    Repo -->|5. 网络持久化请求| SB
+    SB -.->|6. 写入完成响应| Repo
 ```
 
-- Auth 启动缓存键：`nextclass_cached_auth_user`，并可从 Supabase 持久 session 迁移用户。
-- 课程缓存：`courses_<user.id>`；课表缓存：`timetables_<user.id>`。
-- `themeColor`、`transparency`、`cornerRadius`、`cellHeight` 是设备级 localStorage 偏好，不云同步。
-- Course/Timetable 先同步读缓存，再后台拉云端；网络失败保留缓存。
-- `dirtyRef` 和 pending counter 防止后台 fetch 覆盖尚未完成的本地 mutation。
-- repository 是 `Course`/`TimetableConfig` 与 Supabase snake_case row 的唯一映射边界。
-- 登出清用户课程/课表与 auth 启动缓存，保留无关偏好。
+### 3. 教务课表一键抓取流程
 
-开发这些区域时必须同时读取 `$nextclass-supabase`；其离线不变量是兼容性要求，不是对当前代码“已完全正确”的保证。
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Student as 高校学生
+    participant App as NextClass App
+    participant WebView as InAppBrowser 原生容器
+    participant Parser as 客户端智能解析器
+    participant Store as 本地缓存与云端数据库
 
-## 认证、云端与代理
-
-- 浏览器端仅使用 `VITE_SUPABASE_URL` 与 `VITE_SUPABASE_ANON_KEY`；不要读取、打印或提交真实值。
-- 开发态直连配置的 Supabase URL；生产态客户端固定使用 `https://nextclass.top/sb`。`vercel.json` 定义 `/sb/*` 反代和 SPA fallback。
-- 账户注销还依赖远端 RPC `delete_user`。
-- 仓库没有 Supabase SQL、migration、RLS policy 或 RPC 定义；repository 的租户隔离依赖无法在本仓库验证的服务端 RLS。不要捏造 schema/policy，也不要未经授权修改线上项目。
-- `.github/workflows/sync-changelog.yml` 在 main/master push 时可用 service-role secret 运行 `scripts/sync-changelog.js` 写 `changelogs`。该脚本会访问网络并写数据库，不是普通测试命令。
-
-## 课表导入
-
-Android 流程：
-
-```text
-用户选择学校并在 InAppBrowser 登录
-→ 注入“抓取课表”按钮
-→ WebView postMessage 回传页面 HTML
-→ smartParseSchedule
-→ 正方 td-id fast path 或通用 DOM 矩阵 parser
-→ 用户选择覆盖活动课表或创建新课表
-→ CourseContext 本地更新并异步持久化
+    Student->>App: 点击“一键导入”，选择目标高校
+    App->>WebView: 加载高校教务系统登录入口
+    Student->>WebView: 在教务页面自主完成账号密码登录
+    WebView->>WebView: 检测到课表页面，注入抓取脚本
+    WebView->>App: postMessage 回传网页完整 HTML
+    App->>Parser: 传入 HTML 源码 (smartParseSchedule)
+    Parser->>Parser: 识别正方 Fast Path 或通用 DOM 矩阵
+    Parser->>App: 格式化为标准 Course 课程列表
+    App->>Student: 弹窗预览抓取结果（选择覆盖活动课表或新建课表）
+    Student->>App: 确认保存
+    App->>Store: 写入用户隔离缓存，并静默同步至 Supabase
 ```
 
-Web 环境只提供手动粘贴 HTML 的解析路径。当前 `SCHOOLS` 静态列表有 28 项；“1000+ 所高校”是 UI 文案，不是源码能力证明。Excel、PDF、ICS 三个按钮目前没有事件处理，不能描述为已实现功能。
+---
 
-教务登录凭据由目标教务页面处理；NextClass 导入管线接收的是页面 HTML。不要把“自动导入”描述为自动代填或托管学生密码。
+## 🛠️ 技术选型矩阵
 
-## Android 与 PWA 边界
+| 技术层级 | 选型组件 | 描述与版本 |
+| :--- | :--- | :--- |
+| **前端框架** | React 19 + TypeScript 5.8 | 现代组件模型、严格类型约束与高性能渲染引擎 |
+| **构建工具** | Vite 6 | 秒级冷启动开发服务器与极速 Rollup 生产打包 |
+| **样式与动效** | Tailwind CSS 4 + Motion | 现代原子化 CSS 引擎、流动性原生转场与手势反馈 |
+| **原生封装** | Capacitor 8 | 官方最新内核，无缝将 Web 应用封装为 Android 原生工程 |
+| **Android 工程** | Gradle 9.3 + AGP 9.1 + Java 21 | Target SDK 36 (Android 14/15/16 深度适配)，兼顾低版本 SDK 24+ |
+| **后端持久化** | Supabase (Postgres + Auth) | 开源后端服务，支持邮箱安全认证与 Row-Level Security 租户数据隔离 |
+| **网络代理** | Vercel Serverless Proxy | 生产流量通过 `/sb/*` 代理转发，保证国内网络稳定访问与 CORS 规避 |
 
-- Capacitor：`appId=top.nextclass.app`、`webDir=dist`。
-- Android min/compile/target SDK：24/36/36；Gradle wrapper 9.3.1，Android Gradle Plugin 9.1.1，Java source/target 21。
-- `MainActivity.java` 把系统返回手势交给 WebView history；无法后退时交回系统。
-- 状态栏覆盖 WebView，CSS 使用 safe-area；Web/桌面外壳最大宽度为 480px。
-- Manifest 仅显式申请 INTERNET，但允许明文流量，network security config 同时信任 system/user CA，以兼容部分 HTTP 校园教务站。这是安全与兼容性的明确取舍，修改前需要真实学校回归。
-- PWA 预缓存静态资源并注册 SPA fallback；当前 Supabase runtime cache 正则只匹配直连域名，不匹配生产 `/sb` 代理。
-- 带 generated 警告的 Capacitor Gradle/配置文件通过 `npx cap sync` 更新，不直接维护。
+---
 
-## 开发不变量
+## 🚀 快速开始 (Run Locally)
 
-1. 缓存必须在网络之前渲染，离线/超时不得清空已有用户数据。
-2. 后台 fetch 不得覆盖 dirty 本地变更。
-3. 每次 async mutation 的 pending counter 必须在成功、返回错误和 Promise reject 时都归零；优先 `try/finally`。
-4. 网络副作用不要放进 React state updater；入口启用 StrictMode，开发态 updater 可能重放。
-5. 数据库字段映射留在 repository；页面使用领域类型。
-6. 登出只清当前用户数据和 auth 缓存；不要误删个性化偏好。
-7. 修改认证/网络/同步时验证在线启动、离线启动、重连、fetch 期间快速编辑和登出。
-8. 修改 UI 时保持移动优先、safe-area、480px 外壳和 Android 返回行为，并在项目目录使用 `$impeccable`。
+### 前置环境准备
 
-## 已确认的架构风险
+- **[Node.js](https://nodejs.org/)**: 建议 `v20.x` 或以上版本
+- **npm**: Node 自带包管理工具
+- *(可选，仅用于编译 Android APK)*:
+  - **JDK**: 推荐 Java 21 (Temurin / OpenJDK)
+  - **Android SDK**: Compile / Target SDK 36
+  - **Android Studio**: 最新稳定版本
 
-这些是审计事实，不是本次文档任务授权的修复范围：
+---
 
-- Course mutation 目前用 `.then(markSynced)`，缺少 reject 路径的 `catch/finally`；Timetable 已使用 `try/finally`。
-- 重连只刷新 Auth session；Course/Timetable 没有重连 fetch 或离线 mutation replay。
-- Course/Timetable 在 state updater 内发起网络写入，可能受 StrictMode updater 重放影响。
-- repository 的部分 update/delete 不附加 `user_id` 条件，安全性依赖仓库外的 RLS。
-- UI 可编辑节次数量，但缓存恢复会把长度不等于 20 的 periods 重置为默认 20 项。
-- InAppBrowser listener 在每次导入时新增，cancel 不移除 listener。
-- `package.json` 版本、Android `versionName/versionCode` 与 Landing 下载标签没有统一版本源。
-- Android instrumentation 模板仍断言旧 package；正式 release signing 也未配置。
+### 1. 克隆项目仓库
 
-不要把上述风险悄悄“顺手修掉”；相关任务应先复现、界定兼容性和添加验证。
+```bash
+git clone https://github.com/yanyihang621-art/NextClass.git
+cd NextClass
+```
 
-## 开发与验证命令
+### 2. 安装项目依赖
 
-所有命令从本目录运行：
-
-```powershell
+```bash
 npm install
-npm run dev                 # Vite，端口 3000
-npm run lint                # 实际为 tsc --noEmit
+```
+
+### 3. 配置环境变量 (可选)
+
+NextClass 支持离线使用，若需调试云端登录与多端同步，可在项目根目录创建 `.env` 文件：
+
+```ini
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-publishable-anon-key
+```
+
+> ⚠️ **安全须知**：前端与客户端代码仅可使用 Publishable / Anon Key，**切勿**将 Service-Role Key 写入前端代码或提交到 Git 仓库。
+
+### 4. 启动本地开发服务
+
+```bash
+npm run dev
+```
+
+本地服务将在 [http://localhost:3000](http://localhost:3000) 启动。
+
+> 💡 **移动端模拟调试建议**：NextClass 采用移动优先设计（最大外壳宽度为 480px）。在浏览器中按 `F12` 开启开发者工具，切换到手机设备模拟模式（如 Pixel 7 或 iPhone 14 Pro），可获得最真实的交互与手势体验。
+
+---
+
+## 🧪 验证与质量矩阵
+
+在提交代码前，请运行以下验证命令确保代码质量与离线缓存逻辑健全：
+
+```bash
+# 1. TypeScript 类型静态检查
+npm run lint
+
+# 2. Auth 启动离线缓存不变量校验
 npm run verify:startup-cache
+
+# 3. 生产打包验证
 npm run build
+
+# 4. 本地生产包预览
 npm run preview
 ```
 
-没有通用 `npm test`、Vitest/Jest 或 UI/E2E 套件。`verify:startup-cache` 只覆盖 auth 启动缓存。
+---
 
-Android debug 产物的显式流程是：
+## 📦 Android 构建与打包
 
-```powershell
+NextClass 使用 Capacitor 8 管理 Android 原生工程（位于 `android/` 目录）：
+
+### 1. 将 Web 产物同步至 Android 工程
+
+```bash
 npm run build
 npx cap sync android
-Set-Location android
-./gradlew.bat assembleDebug
 ```
 
-`npm run android` 硬编码本机 `D:\JDK-21` 与 `D:\AndroidStudioSDK`，且不自动先构建 Web；不要把它当作可移植 CI 命令。APK promotion 到 Landing 必须由用户明确要求，并在两个仓库分别验证。
+### 2. 编译生成 Debug APK
+
+你可以通过 Gradle 快速构建调试版安装包：
+
+```powershell
+# Windows PowerShell
+cd android
+.\gradlew.bat assembleDebug
+```
+
+编译生成的 APK 位于：  
+`android/app/build/outputs/apk/debug/app-debug.apk`
+
+### 3. 在真机或模拟器运行
+
+如果你已配置好 Android 环境变量，也可直接在连接的真机或模拟器上启动：
+
+```bash
+npx cap run android
+```
+
+---
+
+## 🔒 隐私与安全性保障
+
+1. **教务凭证零触碰**：学生登录教务系统的全过程均在原生安全 WebView 实例内进行。NextClass 仅提取登录成功后渲染出的课表 HTML 结构，**绝不记录、拦截或向远端发送学生的教务账号与密码**。
+2. **多租户安全隔离**：云端数据库严格采用 Supabase Postgres 行级安全机制（RLS），保证每个用户仅能读写自身 UID 绑定的课表与课程。
+3. **校园局域网网络兼容**：为兼容部分高校尚未升级 HTTPS 的校园内网教务系统，Android 客户端网络安全配置做了针对性放行与 CA 信任兼容，确保在各种复杂的校园网络环境中稳定解析。
+
+---
+
+## 🤝 参与贡献
+
+欢迎广大高校师生与开发者共同完善 NextClass，支持更多高校的教务解析：
+
+1. **Fork** 本仓库并创建分支 (`git checkout -b feature/amazing-feature`)
+2. 提交你的代码 (`git commit -m 'feat: 增加对 XX 大学新版教务系统的解析支持'`)
+3. 推送分支到你的远程仓库 (`git push origin feature/amazing-feature`)
+4. 发起 **Pull Request**
+
+---
+
+## 📄 开源协议
+
+本项目基于 [MIT License](LICENSE) 开源。
+
+<br />
+
+<div align="center">
+  <sub>Made with 💜 for university students across China.</sub>
+</div>

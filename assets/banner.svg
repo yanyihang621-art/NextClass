@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 380" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradients -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#090614" />
+      <stop offset="50%" stop-color="#130924" />
+      <stop offset="100%" stop-color="#0c0418" />
+    </linearGradient>
+
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#A855F7" />
+      <stop offset="50%" stop-color="#7C3AED" />
+      <stop offset="100%" stop-color="#4F46E5" />
+    </linearGradient>
+
+    <linearGradient id="textGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="70%" stop-color="#F3E8FF" />
+      <stop offset="100%" stop-color="#C084FC" />
+    </linearGradient>
+
+    <!-- Radial Glows -->
+    <radialGradient id="glowPurple" cx="50%" cy="30%" r="60%">
+      <stop offset="0%" stop-color="#7C3AED" stop-opacity="0.35" />
+      <stop offset="100%" stop-color="#7C3AED" stop-opacity="0" />
+    </radialGradient>
+
+    <radialGradient id="glowIndigo" cx="85%" cy="80%" r="50%">
+      <stop offset="0%" stop-color="#4F46E5" stop-opacity="0.25" />
+      <stop offset="100%" stop-color="#4F46E5" stop-opacity="0" />
+    </radialGradient>
+
+    <!-- Grid Pattern -->
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#FFFFFF" stroke-opacity="0.04" stroke-width="1" />
+    </pattern>
+  </defs>
+
+  <style>
+    .title {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+      font-weight: 900;
+      font-size: 64px;
+      letter-spacing: -1.5px;
+      fill: url(#textGrad);
+    }
+    .slogan {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+      font-weight: 700;
+      font-size: 26px;
+      letter-spacing: 2px;
+      fill: #FFFFFF;
+    }
+    .desc {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      font-weight: 400;
+      font-size: 15px;
+      letter-spacing: 0.5px;
+      fill: #A78BFA;
+    }
+    .badge-text {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "PingFang SC", sans-serif;
+      font-weight: 600;
+      font-size: 12px;
+      fill: #D8B4FE;
+      letter-spacing: 0.5px;
+    }
+  </style>
+
+  <!-- Background Base -->
+  <rect width="1200" height="380" rx="16" fill="url(#bgGrad)" />
+  <rect width="1200" height="380" rx="16" fill="url(#grid)" />
+
+  <!-- Ambient Light -->
+  <circle cx="600" cy="120" r="320" fill="url(#glowPurple)" />
+  <circle cx="1000" cy="300" r="280" fill="url(#glowIndigo)" />
+
+  <!-- Outer Border -->
+  <rect x="0.5" y="0.5" width="1199" height="379" rx="15.5" fill="none" stroke="#FFFFFF" stroke-opacity="0.1" />
+
+  <!-- Top Pill / Status Tag -->
+  <g transform="translate(600, 52)">
+    <rect x="-140" y="-14" width="280" height="28" rx="14" fill="#7C3AED" fill-opacity="0.25" stroke="#A855F7" stroke-opacity="0.4" stroke-width="1" />
+    <circle cx="-116" cy="0" r="4" fill="#34D399" />
+    <text x="-104" y="4" class="badge-text" text-anchor="start">NEXT-GEN STUDENT SCHEDULE</text>
+  </g>
+
+  <!-- Brand Icon -->
+  <g transform="translate(600, 126)">
+    <!-- Icon Container Shadow & Back -->
+    <rect x="-34" y="-34" width="68" height="68" rx="18" fill="url(#accentGrad)" />
+    <rect x="-34" y="-34" width="68" height="68" rx="18" fill="none" stroke="#FFFFFF" stroke-opacity="0.3" stroke-width="1.5" />
+    <!-- Book/Calendar Minimalist Vector Icon -->
+    <path d="M -16 -12 C -16 -14 -14 -16 -12 -16 L 12 -16 C 14 -16 16 -14 16 -12 L 16 12 C 16 14 14 16 12 16 L -12 16 C -14 16 -16 14 -16 12 Z" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linejoin="round" />
+    <path d="M -16 -4 L 16 -4" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" />
+    <path d="M -7 -16 L -7 -20" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" />
+    <path d="M 7 -16 L 7 -20" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" />
+    <circle cx="-6" cy="5" r="2" fill="#FFFFFF" />
+    <circle cx="0" cy="5" r="2" fill="#FFFFFF" />
+    <circle cx="6" cy="5" r="2" fill="#FFFFFF" />
+    <circle cx="-6" cy="11" r="2" fill="#FFFFFF" />
+    <circle cx="0" cy="11" r="2" fill="#FFFFFF" />
+  </g>
+
+  <!-- Main Title -->
+  <text x="600" y="235" text-anchor="middle" class="title">NextClass</text>
+
+  <!-- Chinese Slogan -->
+  <text x="600" y="280" text-anchor="middle" class="slogan">你的专属课表与教务管家</text>
+
+  <!-- English Desc -->
+  <text x="600" y="318" text-anchor="middle" class="desc">A Pure, Ad-Free &amp; Offline-First Mobile Schedule Manager for University Students</text>
+
+  <!-- Bottom Accent Gradient Line -->
+  <path d="M 200 379 L 1000 379" stroke="url(#accentGrad)" stroke-width="2" stroke-linecap="round" opacity="0.8" />
+</svg>
